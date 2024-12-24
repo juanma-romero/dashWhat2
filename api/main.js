@@ -1,4 +1,6 @@
 import {makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
+import axios from 'axios'
+
 
 async function connectToWhatsApp () {
 
@@ -10,6 +12,8 @@ async function connectToWhatsApp () {
         auth: state,
         
     })
+
+    // maneja la coneccion
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update
         if(connection === 'close') {
@@ -23,45 +27,51 @@ async function connectToWhatsApp () {
             console.log('opened connection')
         }
     })
+    // maneja las credenciales
     sock.ev.on('creds.update', saveCreds)
 
-    /*
+    // maneja los mensajes
     sock.ev.on('messages.upsert', async m => {
-
-        console.log(JSON.stringify(m, undefined, 2))
-        // accessing the key.remoteJid property directly might throw an error if it's undefined.  
-        const remoteJid = m.messages[0].key.remoteJid
-        if (remoteJid) {
-            console.log('replying to', remoteJid);
-            await sock.sendMessage(remoteJid, { text: 'Hello there!' })
-        }
-
-    })
-        */
-    sock.ev.on('messages.upsert', async m => {
-        console.log(JSON.stringify(m, undefined, 2))
+        //console.log(JSON.stringify(m, undefined, 2))
     
         try {
-            if (!m.messages[0] || !m.messages[0].key || !m.messages[0].key.remoteJid) {
-                // Handle cases where these are missing for some reason to prevent crashes
-                console.warn('Incomplete message data:', JSON.stringify(m.messages[0]?.key));
-                return; // Skip processing this message
+            const message = m.messages[0];
+            
+            // Filtrar mensajes de 'status@broadcast' y mensajes de grupo
+            if (!message || message.key.remoteJid === 'status@broadcast' || message.key.remoteJid.endsWith('@g.us')) {
+                return;  // Salir prematuramente si el mensaje es de un status broadcast o un grupo
             }
     
+            // Solo procesa si el mensaje es entrante (no de tu bot)
+            if (!message.key.fromMe) { 
+                const sender = message.key.remoteJid;
+                const timestamp = message.messageTimestamp;
+                let textMessage = "";
     
-            const message = m.messages[0];
+                // Manejo de diferentes tipos de mensaje
+                if (message.message && message.message.conversation) {
+                    textMessage = message.message.conversation;
+                } else if (message.message && message.message.extendedTextMessage && message.message.extendedTextMessage.text) {
+                    textMessage = message.message.extendedTextMessage.text;
+                }
     
-            // Check if the message is not from your bot (i.e., incoming message)
-            if (!message.key.fromMe) {
-                const remoteJid = message.key.remoteJid;  // Now safe to access
+                console.log('Remitente:', sender);
+                console.log('Mensaje:', textMessage);
+                console.log('Timestamp:', new Date(timestamp * 1000));
     
-                console.log('replying to', remoteJid);
-                await sock.sendMessage(remoteJid, { text: 'Hello there!' });
+                // Reenviar datos esenciales al backend
+                await axios.post('http://localhost:5000/api/messages', {
+                    sender,
+                    text: textMessage,
+                    timestamp: new Date(timestamp * 1000).toISOString()
+                });
             }
         } catch (error) {
             console.error('Error processing message:', error);
         }
-    
+
+
+
     })
 }
 // run in main file
