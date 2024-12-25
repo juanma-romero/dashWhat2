@@ -1,4 +1,48 @@
-    import './App.css';
+import React, { useState, useEffect } from 'react'
+import { io } from 'socket.io-client'
+
+function App() {
+    const [messages, setMessages] = useState([])
+
+    useEffect(() => {
+        const socket = io('http://localhost:5000', {
+          transports: ['websocket'] // Asegura que el transporte primario sea WebSocket
+        }) // Asegúrate de que coincide con el backend
+
+          // Confirmar conexión
+        socket.on('connect', () => {
+            console.log('Frontend conectado al backend con WebSocket');
+        })
+
+        // Escuchar los mensajes desde el backend
+        socket.on('new-message', (message) => {
+            console.log('Nuevo mensaje recibido:', message);
+            setMessages((prevMessages) => [...prevMessages, message]);
+        })
+
+        // Limpia la conexión al desmontar el componente
+        return () => socket.disconnect()
+    }, []);
+
+    return (
+        <div>
+            <h1 className="text-3xl font-bold underline">Mensajes</h1>
+            <div className="message-list">
+                {messages.map((msg, index) => (
+                    <div key={index}>
+                        <strong>{msg.sender}</strong>: {msg.text} <span>({new Date(msg.timestamp).toLocaleString()})</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+export default App
+    
+    
+    
+    /*import './App.css';
     import React, { useState, useEffect } from 'react';
     import { io } from 'socket.io-client';
     
@@ -69,4 +113,4 @@
       );
     }
     
-    export default App;
+    export default App;*/

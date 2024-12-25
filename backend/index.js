@@ -21,7 +21,7 @@ const pool = new Pool({
 // Configurar CORS para socket.io
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173', // Reemplaza con el origen correcto
+    origin: 'http://localhost:5173', 
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
     credentials: true // Permite compartir cookies 
@@ -30,7 +30,7 @@ const io = new Server(server, {
 
 // Middleware para manejar CORS en Express (para cualquier otra ruta)
 app.use(cors({
-  origin: 'http://localhost:5000',
+  origin: 'http://localhost:5173',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }))
@@ -48,10 +48,9 @@ app.post('/api/messages', async (req, res) => {
     )
     
     console.log('Message stored in DB:', { sender, text, timestamp })
-
-    // Envía el mensaje a todos los clientes conectados
-    //io.emit('new-message', { sender, text, timestamp })
+    io.emit('new-message', { sender, text, timestamp })
     res.sendStatus(200)
+   
 
   } catch (err) {
     console.error('Error storing message', err)
