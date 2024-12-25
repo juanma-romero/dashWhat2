@@ -1,25 +1,41 @@
-const express = require('express')
-const cors = require('cors')// Permite el acceso CORS
-const bodyParser = require('body-parser')
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
 
-const app = express()
-const PORT = process.env.PORT || 5000
+const app = express();
+const server = http.createServer(app);
 
-// Usar CORS para permitir llamadas desde el front-end
-app.use(cors())
-app.use(bodyParser.json())
+// Configurar CORS para socket.io
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173', // Reemplaza con el origen correcto
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type'],
+    credentials: true // Permite compartir cookies 
+  }
+});
 
-app.get('/api/ping', (req, res) => {
-  res.json({ message: 'pong' })
-})
+// Middleware para manejar CORS en Express (para cualquier otra ruta)
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 
-app.post('/api/messages', (req, res) => {
-    const messageData = req.body
-    console.log('Message received from Baileys:', messageData)
-    // Procesa el mensaje según sea necesario
-    res.sendStatus(200)
-})
+io.on('connection', (socket) => {
+  console.log('A user connected');
+  
+  socket.on('ping', (data) => {
+    console.log('Received from client:', data);
+    socket.emit('pong', 'Hello from server!');
+  });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`)
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
+
+server.listen(5000, () => {
+  console.log('Server is listening on port 5000');
 });
