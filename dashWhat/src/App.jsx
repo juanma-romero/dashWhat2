@@ -1,50 +1,72 @@
-import './App.css';
-import React, { useState, useEffect } from 'react';
-import { io } from 'socket.io-client'; // Importa socket.io-client
-
-function App() {
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    // Inicializa la conexión con el servidor de WebSocket
+    import './App.css';
+    import React, { useState, useEffect } from 'react';
+    import { io } from 'socket.io-client';
+    
     const socket = io('http://localhost:5000');
-        // Lógica de conexión
+    
+    function App() {
+      const [message, setMessage] = useState('');
+      const [messages, setMessages] = useState([]);
+      const senderId = "1234567890@s.whatsapp.net"; // Reemplaza con el ID de usuario
+    
+      useEffect(() => {
         socket.on('connect', () => {
           console.log('Connected to WebSocket server');
-          setMessage('Connected to WebSocket server');
-          
-          // Retrasar el envío del mensaje de ping por 10 segundos
-        setTimeout(() => {
-        socket.emit('ping', { message: 'Hello from client!' });
-        console.log('Ping sent to server');
-        }, 10000); // 10 segundos de retraso
         });
     
-        // Maneja respuesta del servidor
-        socket.on('pong', (msg) => {
-          console.log('Message from server:', msg);
-          setMessage(msg);
+        socket.on('new-message', (data) => {
+          console.log('New message from server:', data);
+          setMessages((prevMessages) => [...prevMessages, data]);
         });
     
-        // Maneja desconexiones
         socket.on('disconnect', () => {
           console.log('Disconnected from WebSocket server');
-          setMessage('Disconnected from WebSocket server');
         });
     
-        // Limpieza al desmontar el componente
-        return () => socket.disconnect();
+        return () => {
+          socket.off('new-message');
+          socket.disconnect();
+        };
       }, []);
+    
+      const handleSendMessage = () => {
+        const timestamp = Date.now(); // Obtiene el timestamp actual
+        const messageData = {
+          sender: senderId,
+          text: message,
+          receiverId: '0987654321@s.whatsapp.net', // Asigna el ID del destinatario
+          timestamp: timestamp,
+        };
+    
+        // Emitir el mensaje al servidor
+        socket.emit('send-message', messageData);
+        
+        // Limpiar el input
+        setMessage('');
+      };
+    
       return (
-        <>      
-          <h1 className="text-3xl font-bold underline">
-          Hello world!
-          </h1> 
+        <>
+          <h1 className="text-3xl font-bold underline">Chat Application</h1>
           <div className="App">
-            <h2>WebSocket Message: {message}</h2>
-          </div>     
+            <div>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Enter your message"
+              />
+              <button onClick={handleSendMessage}>Send Message</button>
+            </div>
+            <h2>Messages:</h2>
+            {messages.map((msg, index) => (
+              <div key={index}>
+                <strong>{msg.sender}</strong>: {msg.text} <em>{new Date(msg.timestamp).toLocaleString()}</em>
+              </div>
+            ))}
+          </div>
         </>
       );
     }
     
-    export default App
+    export default App;
