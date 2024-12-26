@@ -37,6 +37,21 @@ app.use(cors({
 }))
 app.use(express.json());
 
+// Ruta para obtener el historial de mensajes
+app.get('/api/messages/history', async (req, res) => {
+  try {
+    // Realizar la consulta a la base de datos
+    const result = await pool.query('SELECT * FROM messages ORDER BY timestamp DESC');
+    res.json(result.rows); // Enviar el resultado como JSON
+  } catch (err) {
+    console.error('Error fetching message history', err);
+    res.status(500).send('Error fetching message history');
+  }
+});
+
+
+
+
 // Ruta REST para recibir mensajes de Baileys
 app.post('/api/messages', async (req, res) => {
   const { sender, text, timestamp } = req.body;

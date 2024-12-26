@@ -5,17 +5,9 @@ vamos a concentrarnos primero en la conexion entre baileys y backend. ya habiamo
 * todo el camino anterior pero hacia baileys, es decir: frontend envia a backend, este guarda en db y reenvia a baileys (con websocket)
 
 
+no me permite enviar mensajes de voraz/dashWhat a voraz, da error en bayleais pero no se cae app, segun consola backend ahi no hay problema, front se puso pantalla blanca, refresque pagina y estaba el mensaje enviado
+
+   
 
 
-
-// Envía el mensaje a todos los clientes conectados
-    io.emit('new-message', { sender, text, timestamp })
-    en backend ...envia a whatsap tambien? solo quiero a l front cuando viene de what y hacia what cunado viene de front
-    ...no a los dos siempre, duplica mensaje del que envia asi
-
-
-
-
-    historial conversacion
-    no queda respuesta de voraz en chat
     
