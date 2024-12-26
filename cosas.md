@@ -12,3 +12,10 @@ vamos a concentrarnos primero en la conexion entre baileys y backend. ya habiamo
     io.emit('new-message', { sender, text, timestamp })
     en backend ...envia a whatsap tambien? solo quiero a l front cuando viene de what y hacia what cunado viene de front
     ...no a los dos siempre, duplica mensaje del que envia asi
+
+
+
+
+    historial conversacion
+    no queda respuesta de voraz en chat
+    
