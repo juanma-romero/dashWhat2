@@ -37,20 +37,20 @@ const ChatList = ({ chats, handleChatClick }) => (
 )
 
 const ChatArea = ({ selectedChat, chats, messageText, handleMessageChange, handleSendMessage }) => (
-  <div className="flex-1 p-4 bg-slate-500 flex flex-col justify-end">
-    <div className="space-y-4 flex-1 overflow-y-auto flex flex-col-reverse">
-      {selectedChat && chats[selectedChat] && chats[selectedChat].map((message, index) => (
-        <div
-          key={index}
-          className={`${
-            message.sender === selectedChat ? 'bg-gray-200 text-left' : 'bg-blue-500 text-white text-right'
-          } p-3 rounded-lg max-w-xs ${
-            message.sender === selectedChat ? '' : 'ml-auto'
-          }`}
-        >
-          {message.text}
-        </div>
-      ))}
+  <div className="flex-1 p-4 bg-slate-500 flex flex-col justify-end h-full overflow-y-auto">
+    <div className="space-y-4 flex-1 overflow-y-auto flex flex-col-reverse scrollbar-thumb-gray-900 scrollbar-track-gray-100">
+      {selectedChat && chats[selectedChat]?.map((message, index) => (
+      <div
+        key={index}
+        className={`${
+          message.sender === selectedChat ? 'bg-gray-200 text-left' : 'bg-blue-500 text-white text-right'
+        } p-3 rounded-lg max-w-xs ${
+          message.sender === selectedChat ? '' : 'ml-auto'
+        }`}
+      >
+        {message.text}
+      </div>
+    ))}
     </div>
     {selectedChat && (
       <div className="flex items-center mt-4">
@@ -84,7 +84,7 @@ const App = () => {
       .then(response => response.json())
       .then(data => {
         const groupedData = groupMessagesByContact(data)
-        setChats(groupedData);
+        setChats(groupedData)
       })
       .catch(error => console.error('Error fetching message history:', error))
 
@@ -94,7 +94,7 @@ const App = () => {
 
     // Maneja nuevos mensajes
     socketRef.current.on('new-message', (message) => {
-      console.log('New message received:', message)
+      //console.log('New message received:', message)
       setChats((prevChats) => {
         const contact = message.sender;
         const updatedChats = { ...prevChats }
@@ -132,17 +132,30 @@ const App = () => {
   const handleSendMessage = () => {
     if (selectedChat && messageText) {
       const myWhatsAppNumber = '595985214420@s.whatsapp.net'
-      //console.log(`Sending message: "${messageText}" to ${selectedChat.sender}`)
       socketRef.current.emit('send-message', {
         sender: myWhatsAppNumber,
-        recipient: selectedChat.sender,
+        recipient: selectedChat,
         text: messageText,
       })
-       // También insertar el mensaje directamente en el estado del chat
-       setChats((prevChats) => [
-        ...prevChats,
-        { text: messageText, sender: myWhatsAppNumber, timestamp: new Date().toISOString() }
-      ])
+  
+      // Añadir el mensaje enviado al estado de chats en función de recipient
+      setChats((prevChats) => {
+        const updatedChats = { ...prevChats }
+  
+        if (!updatedChats[selectedChat]) {
+          updatedChats[selectedChat] = []
+        }
+  
+        updatedChats[selectedChat].push({
+          sender: myWhatsAppNumber,
+          recipient: selectedChat,
+          text: messageText,
+          timestamp: new Date().toISOString()
+        })
+  
+        return updatedChats
+      })
+  
       setMessageText('')
     }
   }
@@ -152,7 +165,7 @@ const App = () => {
       <Sidebar />
       <div className="flex flex-col flex-1">
         <Header />
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-y-auto">
           <ChatList chats={chats} handleChatClick={handleChatClick} />
           <ChatArea
              selectedChat={selectedChat}

@@ -7,7 +7,15 @@ vamos a concentrarnos primero en la conexion entre baileys y backend. ya habiamo
 
 no me permite enviar mensajes de voraz/dashWhat a voraz, da error en bayleais pero no se cae app, segun consola backend ahi no hay problema, front se puso pantalla blanca, refresque pagina y estaba el mensaje enviado
 
-   
+
+***TODO**
+
+mensajes enviados desde celu no se ven 
+ o mensajes enviados recibidos con servidor apagado...alguna forma de traer desde whatsap?? 
+
+listado de chat , debe ir arriba el que tiene el mensaje recibido o enviado, mas nuevo 
+
+   graba mensaje enviado en db??
 
 
     

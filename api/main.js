@@ -70,7 +70,7 @@ async function connectToWhatsApp () {
             
             // Filtrar mensajes de 'status@broadcast' y mensajes de grupo
             if (!message || message.key.remoteJid === 'status@broadcast' || message.key.remoteJid.endsWith('@g.us')) {
-                return;  // Salir prematuramente si el mensaje es de un status broadcast o un grupo
+                return  // Salir prematuramente si el mensaje es de un status broadcast o un grupo
             }
     
             // Solo procesa si el mensaje es entrante (no de tu bot)
@@ -97,10 +97,10 @@ async function connectToWhatsApp () {
                     timestamp: new Date(timestamp * 1000).toISOString()
                 })
                 // Emitimos estos datos hacia el frontend a través del backend
-                socket.emit('new-message', { sender, text: textMessage, timestamp });
+                socket.emit('new-message', { sender, text: textMessage, timestamp })
             }
         } catch (error) {
-            console.error('Error processing message:', error);
+            console.error('Error processing message:', error)
         }
     })
 }
