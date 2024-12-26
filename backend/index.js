@@ -4,6 +4,7 @@ import http from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
 import pkg from 'pg'
+import axios from 'axios'
 
 const { Pool } = pkg
 const app = express();
@@ -24,7 +25,7 @@ const io = new Server(server, {
     origin: 'http://localhost:5173', 
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
-    credentials: true // Permite compartir cookies 
+    credentials: true 
   }
 })
 
@@ -49,8 +50,7 @@ app.post('/api/messages', async (req, res) => {
     
     console.log('Message stored in DB:', { sender, text, timestamp })
     io.emit('new-message', { sender, text, timestamp })
-    res.sendStatus(200)
-   
+    res.sendStatus(200)   
 
   } catch (err) {
     console.error('Error storing message', err)
@@ -62,31 +62,25 @@ app.post('/api/messages', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('A user connected')
 
-      // Ejemplo: Cuando un usuario se une a un chat
-  socket.on('join-chat', ({ chatId }) => {
-    socket.join(chatId);
-    console.log(`User joined chat: ${chatId}`)
-  })
-
-  // Manejo de envío de mensajes a un usuario específico
-  socket.on('send-message', async ({ sender, recipient, text, timestamp }) => {
+  // Manejo de envío de mensajes desde el frontend
+  socket.on('send-message', async ({ sender, recipient, text }) => {
     try {
+      const timestamp = new Date().toISOString()
+
+      // Guardar el mensaje en la base de datos
       await pool.query(
         'INSERT INTO messages (sender, text, timestamp) VALUES ($1, $2, $3)',
-        [sender, text, new Date(timestamp)]
-      );
-      
-      console.log('Message stored in DB:', { sender, text, timestamp });
+        [sender, text, timestamp]
+      )
+      console.log('Message stored in DB:', { sender, recipient, text });
 
-      // Enviar mensaje de vuelta solo al destinatario y al remitente
-      io.to(recipient).emit('new-message', { sender, text, timestamp });
-      //io.to(sender).emit('new-message', { sender, text, timestamp });
+      // Enviar el mensaje a Baileys para ser reenviado a WhatsApp
+      io.emit('send-whatsapp-message', { remoteJid: recipient, message: text })
 
     } catch (err) {
-      console.error('Error storing message', err);
+      console.error('Error storing message', err)
     }
-  })
-
+  }) 
 
   socket.on('disconnect', () => {
     console.log('User disconnected')
