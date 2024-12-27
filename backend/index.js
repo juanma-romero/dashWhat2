@@ -42,7 +42,7 @@ app.get('/api/messages/history', async (req, res) => {
     // Realizar la consulta a la base de datos
     const result = await pool.query('SELECT * FROM messages ORDER BY timestamp DESC')
     //console.log('Message history fetched from DB:', result.rows);
-    res.json(result.rows); // Enviar el resultado como JSON
+    res.json(result.rows) // Enviar el resultado como JSON
   } catch (err) {
     console.error('Error fetching message history', err);
     res.status(500).send('Error fetching message history');
@@ -100,6 +100,6 @@ io.on('connection', (socket) => {
   })
 })
 
-server.listen(5000, () => {
-  console.log('Server is listening on port 5000')
+server.listen(5500, () => {
+  console.log('Server is listening on port 5500')
 })

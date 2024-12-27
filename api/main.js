@@ -19,7 +19,7 @@ async function connectToWhatsApp () {
     sock.ev.on('creds.update', saveCreds)
 
         // Configurar conexión de WebSocket con el backend
-    const socket = io('http://localhost:5000');  // Ajustar la URL según sea necesario
+    const socket = io('http://localhost:5500');  // Ajustar la URL según sea necesario
 
     socket.on('connect', () => {
         console.log('Connected to WebSocket server');
@@ -45,7 +45,7 @@ async function connectToWhatsApp () {
             console.log('Disconnected from WebSocket server')
         })
 
-    // maneja la coneccion
+    // maneja la coneccion de baileys
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update
         if(connection === 'close') {
@@ -61,7 +61,7 @@ async function connectToWhatsApp () {
     })
     
 
-    // maneja los mensajes
+    // maneja los mensajes recibidos de baileys/cliente
     sock.ev.on('messages.upsert', async m => {
         //console.log(JSON.stringify(m, undefined, 2))
     
@@ -91,7 +91,7 @@ async function connectToWhatsApp () {
                 console.log('Timestamp:', new Date(timestamp * 1000))
     
                 // Reenviar datos esenciales al backend
-                await axios.post('http://localhost:5000/api/messages', {
+                await axios.post('http://localhost:5500/api/messages', {
                     sender,
                     text: textMessage,
                     timestamp: new Date(timestamp * 1000).toISOString()
