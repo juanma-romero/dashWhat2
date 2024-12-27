@@ -26,6 +26,8 @@ id unico de cada mensaje (independientemente de quien envie, para poner en chatA
 
    buscar como poner imagen de usuario y nombre en chat
 
+   
+
    buscar que otro future ademas de establecer estados en chat podria servir para comercios
    creo que cuando manda mensaje voraz no resetea field
    
@@ -35,5 +37,19 @@ id unico de cada mensaje (independientemente de quien envie, para poner en chatA
 //  fromMe?: (boolean|null);
 /** MessageKey id. */
 //  public id: string;
+
+ver tema foto perfil !!
+y nombre 'pushName'??
+
+
+muchas opciones para investigar tipo historial , perfil, etc
+baileys/lib/socket/index.d.ts makeWASocket en linea 5 empieza
+
+
+no resetea filed, mensaje duplicado y arriba
+
+
+
+cuando abre sesion no aparecen las conversaciones cruzadas, cuando mensajeo a alguien aparece pero si refresco explorador vuelve a estado primario
 
     

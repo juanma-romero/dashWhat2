@@ -18,7 +18,6 @@ const groupMessagesByContact = (messages) => {
     acc[contact].push(message)
     return acc
   }, {})
-
   
   // Crear un arreglo de las llaves (contactos) ordenadas por el timestamp del último mensaje
   const orderedKeys = Object.keys(grouped).sort((a, b) => {
@@ -43,7 +42,7 @@ const App = () => {
   const socketRef = useRef()
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/messages/history')
+    fetch('http://localhost:5500/api/messages/history')
       .then(response => response.json())
       .then(data => {
         const groupedData = groupMessagesByContact(data);
@@ -51,7 +50,7 @@ const App = () => {
       })
       .catch(error => console.error('Error fetching message history:', error));
   
-    socketRef.current = io('http://localhost:5000', {
+    socketRef.current = io('http://localhost:5500', {
       transports: ['websocket'],
     })
 
