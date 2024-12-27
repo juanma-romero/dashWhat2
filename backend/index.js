@@ -4,7 +4,6 @@ import http from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
 import pkg from 'pg'
-import axios from 'axios'
 
 const { Pool } = pkg
 const app = express();
