@@ -46,10 +46,15 @@ muchas opciones para investigar tipo historial , perfil, etc
 baileys/lib/socket/index.d.ts makeWASocket en linea 5 empieza
 
 
-no resetea filed, mensaje duplicado y arriba
+no resetea text area para escribir mensaje para enviar, mensaje duplicado y arriba
+
+en db: mensaje desde voraz esta mal la fecha, esto lo genera nuestra app, tiene adelanto 3 horas. Ver como se genera ese dato. 
+   desde juanma esta bien , esta la genera whatsap 
+   en consola baileys se ve timestamp con 3 horas adelanto pero en db guarda bien , hay alguna transformacion en el camino
 
 
+cuando abre sesion no aparecen las conversaciones cruzadas (cuando request debe pedir sender o recipient para el chat), cuando mensajeo a alguien aparece pero si refresco explorador vuelve a estado primario
 
-cuando abre sesion no aparecen las conversaciones cruzadas, cuando mensajeo a alguien aparece pero si refresco explorador vuelve a estado primario
+handleSendMessage??? en util no esta, es llamado en AreaChat
 
     
