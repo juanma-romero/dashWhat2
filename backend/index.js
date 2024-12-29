@@ -1,16 +1,38 @@
 import 'dotenv/config'
 import express from 'express'
 import http from 'http'
-import { Server } from 'socket.io'
+import { Server } from 'socket.io' 
 import cors from 'cors'
 import pkg from 'pg'
-import axios from 'axios'
+//import dotenv from 'dotenv';
+import { MongoClient, ServerApiVersion } from 'mongodb'
 
-const { Pool } = pkg
+//dotenv.config()
+const myWhatsAppNumber = '595985214420@s.whatsapp.net'
+const { Pool } = pkg// usado para postgresql
 const app = express();
 const server = http.createServer(app)
 
 //configura db
+//Mongo
+const uri = "mongodb://127.0.0.1:27017/dash"; // Replace with your connection string
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+let collection;  // Variable to hold the collection
+
+async function connectToDatabase() {
+  try {
+    await client.connect();
+    console.log('Connected to MongoDB');
+    const db = client.db('dash'); // Access your database
+    collection = db.collection('messages'); // Access your collection    
+  } catch (err) {
+    console.error('Error connecting to MongoDB:', err);
+  }
+}
+
+connectToDatabase()
+/*
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
@@ -18,7 +40,7 @@ const pool = new Pool({
   password: process.env.PASS_DB,
   port: 5432,
 })
-
+*/
 // Configurar CORS para socket.io
 const io = new Server(server, {
   cors: {
@@ -29,16 +51,27 @@ const io = new Server(server, {
   }
 })
 
-// Middleware para manejar CORS en Express (para cualquier otra ruta)
+// Middleware para manejar CORS en Express 
 app.use(cors({
   origin: 'http://localhost:5173',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }))
-app.use(express.json());
+app.use(express.json())
 
-// Ruta para obtener el historial de mensajes
+// Ruta para obtener el historial de mensajes a enviar a Frontend
 app.get('/api/messages/history', async (req, res) => {
+  try {
+    const messages = await collection.find().sort({ timestamp: -1 }).toArray() // Convert to array
+    res.json(messages)
+  } catch (err) {
+    console.error('Error fetching message history from MongoDB', err)
+    res.status(500).send('Error fetching message history')
+  }
+})
+
+
+/*app.get('/api/messages/history', async (req, res) => {
   try {
     // Realizar la consulta a la base de datos
     const result = await pool.query('SELECT * FROM messages ORDER BY timestamp DESC')
@@ -48,53 +81,99 @@ app.get('/api/messages/history', async (req, res) => {
     console.error('Error fetching message history', err);
     res.status(500).send('Error fetching message history');
   }
-})
+})*/
 
-// Ruta REST para recibir mensajes de Baileys
+// Ruta REST para recibir mensajes emitidos de Baileys y emitidos de Frontend para guardar en db 
 app.post('/api/messages', async (req, res) => {
-  const { sender, text, timestamp } = req.body
-  const recipient = '595985214420@s.whatsapp.net'  // Estableciendo el recipient directamente
-
+  const messageData = req.body.message
   try {
-    // Guarda el mensaje en la base de datos
-    await pool.query(
-      'INSERT INTO messages (sender, text, timestamp, recipient) VALUES ($1, $2, $3, $4)',
-      [sender, text, new Date(timestamp), recipient]
-    )
-    
-    console.log('Mensaje almacenado en la DB:', { sender, text, timestamp, recipient })
-    io.emit('new-message', { sender, text, timestamp, recipient })
-    res.sendStatus(200)   
-
+    const result = await collection.insertOne(messageData); // Use collection.insertOne()
+    console.log('Message stored in MongoDB:', result); // Log the result
+    res.sendStatus(200)
   } catch (err) {
-    console.error('Error al almacenar el mensaje', err)
+    console.error('Error storing message in MongoDB', err)
     res.status(500).send('Error storing message')
   }
 })
 
-// coneccion con websocket
+app.get('/api/test-mongodb', async (req, res) => {
+  try {
+    if (!collection) { // Check if collection is defined
+        console.error("MongoDB collection is not defined. Check connection.");
+        return res.status(500).send("Database error");
+      }
+    const messages = await collection.find().toArray();
+    res.json(messages);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    res.status(500).send("Error fetching data");
+  }
+});
+
+
+//app.post('/api/messages', async (req, res) => {
+//  console.log(req.body.message)
+/*
+  const id = message.key.id
+            const sender = message.key.remoteJid
+            const timestamp = message.messageTimestamp
+            let textMessage = ""
+// Manejo de diferentes tipos de mensaje
+            if (message.message && message.message.conversation) {
+                textMessage = message.message.conversation
+            } else if (message.message && message.message.extendedTextMessage && message.message.extendedTextMessage.text) {
+                textMessage = message.message.extendedTextMessage.text
+            }
+
+
+  const messageData = req.body.messages[0]  // Asumimos que sólo hay un mensaje en el array
+  const id = messageData.key.id
+  const sender = messageData.key.remoteJid
+  const text = messageData.message.conversation
+  const timestamp = new Date(messageData.messageTimestamp * 1000) // Convertir de UNIX timestamp a JS Date
+  const recipient = myWhatsAppNumber;
+  const senderName = messageData.pushName; 
+
+  try {
+    // Guarda el mensaje en la base de datos
+    await pool.query(
+      'INSERT INTO messages (id, sender, senderName, text, timestamp, recipient) VALUES ($1, $2, $3, $4, $5, $6)',
+      [id, sender, senderName, text, timestamp, recipient]
+    )    
+    console.log('Mensaje almacenado en la DB:', { sender, senderName, text, timestamp, recipient })     
+    res.sendStatus(200)
+  } catch (err) {
+    console.error('Error al almacenar el mensaje', err)
+    res.status(500).send('Error storing message')
+  }
+  */
+//})
+
+
+//          Coneccion con websocket 
+//  Envia desde 1) Front>>Baileys y desde 2) Baileys>>Front
 io.on('connection', (socket) => {
   console.log('A user connected')
 
-  // Manejo de envío de mensajes desde el frontend
-  socket.on('send-message', async ({ sender, recipient, text }) => {
-    try {
-      const timestamp = new Date().toISOString()
-
-      // Guardar el mensaje en la base de datos
-      await pool.query(
-        'INSERT INTO messages (sender, text, timestamp, recipient) VALUES ($1, $2, $3, $4)',
-        [sender, text, timestamp, recipient]
-      )
-      console.log('Message stored in DB:', { sender, recipient, text, timestamp });
-
+  // 1) Manejo de envío de mensajes desde el frontend >>>> Baileys
+  socket.on('send-message-from-frontend', async ({ sender, recipient, text }) => {
+    try {      
       // Enviar el mensaje a Baileys para ser reenviado a WhatsApp
-      io.emit('send-whatsapp-message', { remoteJid: recipient, message: text })
+      io.emit('send-message-from-frontend', { sender, remoteJid: recipient, message: text })
 
     } catch (err) {
       console.error('Error storing message', err)
     }
   }) 
+
+  // 2) Manejo de mensajes desde Baileys >>> frontend
+  socket.on('new-message-from-whatsapp', async (messageData) => {
+    try {
+      io.emit('new-message-from-whatsapp', { messageData })
+    } catch (err) {
+      console.error('Error processing message', err)
+    }
+  })
 
   socket.on('disconnect', () => {
     console.log('User disconnected')
@@ -104,3 +183,10 @@ io.on('connection', (socket) => {
 server.listen(5000, () => {
   console.log('Server is listening on port 5000')
 })
+
+
+
+
+/*
+
+*/

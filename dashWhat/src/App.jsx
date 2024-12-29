@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
 import Header from './Header'
 import Sidebar from './Sidebar'
+//import dotenv from 'dotenv';
+
+//dotenv.config()
+const myWhatsAppNumber = '595985214420@s.whatsapp.net'
 
 // Función para agrupar mensajes por contacto
 const groupMessagesByContact = (messages) => {
@@ -39,24 +43,33 @@ const ChatList = ({ chats, handleChatClick }) => (
 const ChatArea = ({ selectedChat, chats, messageText, handleMessageChange, handleSendMessage }) => (
   <div className="flex-1 p-4 bg-slate-500 flex flex-col justify-end h-full overflow-y-auto">
     <div className="space-y-4 flex-1 overflow-y-auto flex flex-col-reverse scrollbar-thumb-gray-900 scrollbar-track-gray-100">
-      {selectedChat && chats[selectedChat]?.map((message, index) => (
-      <div
-        key={index}
-        className={`${
-          message.sender === selectedChat ? 'bg-gray-200 text-left' : 'bg-blue-500 text-white text-right'
-        } p-3 rounded-lg max-w-xs ${
-          message.sender === selectedChat ? '' : 'ml-auto'
-        }`}
-      >
-        {message.text}
-      </div>
-    ))}
+    {selectedChat && chats[selectedChat]?.map((message, index) => {
+  
+  const timeString = messageDate.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  return (
+    <div
+      key={index}
+      className={`${
+        message.sender === selectedChat ? 'bg-gray-200 text-left' : 'bg-blue-500 text-white text-right'
+      } p-3 rounded-lg max-w-xs ${
+        message.sender === selectedChat ? '' : 'ml-auto'
+      }`}
+    >
+      <div>{message.text}</div>
+      <div className="text-xs text-gray-500">{timeString}</div>
+    </div>
+  );
+})}
     </div>
     {selectedChat && (
       <div className="flex items-center mt-4">
         <input
           type="text"
-          placeholder="Type your message"
+          placeholder="Escribe tu mensaje"
           className="w-full p-3 border rounded-md"
           value={messageText}
           onChange={handleMessageChange}
@@ -80,20 +93,20 @@ const App = () => {
 
   useEffect(() => {
     // Solicitar el historial de mensajes al servidor
-    fetch('http://localhost:5000/api/messages/history')
+    /*fetch('http://localhost:5000/api/messages/history')
       .then(response => response.json())
       .then(data => {
         const groupedData = groupMessagesByContact(data)
         setChats(groupedData)
       })
       .catch(error => console.error('Error fetching message history:', error))
-
+*/
     socketRef.current = io('http://localhost:5000', {
       transports: ['websocket'],
     })
 
-    // Maneja nuevos mensajes
-    socketRef.current.on('new-message', (message) => {
+    // Maneja nuevos mensajes 
+    socketRef.current.on('new-message-from-whatsapp', (message) => {
       //console.log('New message received:', message)
       setChats((prevChats) => {
         const contact = message.sender;
@@ -131,12 +144,15 @@ const App = () => {
 
   const handleSendMessage = () => {
     if (selectedChat && messageText) {
-      const myWhatsAppNumber = '595985214420@s.whatsapp.net'
-      socketRef.current.emit('send-message', {
-        sender: myWhatsAppNumber,
+      const myWhatsAppNumberInside = myWhatsAppNumber;
+      const messageData = {
+        sender: myWhatsAppNumberInside,
         recipient: selectedChat,
-        text: messageText,
-      })
+        text: messageText,        
+        fromMe: true
+      }
+  
+      socketRef.current.emit('send-message-from-frontend', messageData)
   
       // Añadir el mensaje enviado al estado de chats en función de recipient
       setChats((prevChats) => {
@@ -147,10 +163,9 @@ const App = () => {
         }
   
         updatedChats[selectedChat].push({
-          sender: myWhatsAppNumber,
+          sender: myWhatsAppNumberInside,
           recipient: selectedChat,
-          text: messageText,
-          timestamp: new Date().toISOString()
+          text: messageText,          
         })
   
         return updatedChats

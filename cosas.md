@@ -17,5 +17,14 @@ listado de chat , debe ir arriba el que tiene el mensaje recibido o enviado, mas
 
    graba mensaje enviado en db??
 
+se ve la hora en cada mensaje dentro del chat, pero si no es del dia de hoy deberia verse un banner o algo asi que diga a que fecha corresponde ese sector de chatArea 
 
-    
+
+se modifico back recibe de baileys, ahora hay que modificar o rovisar como se envia a baileys, tambien como se guarda en db seguramente agregar pushName
+cuando se envia a baileys , omo tomamos el id del mensaje?
+
+
+que en frontend cuando se pida mensajes por canal sea de acuerdo a recipient y a sender ( o sea cuando envia y recibe mensaje un numero debe mandar al chatarea)
+
+
+estamos guardando en db, los mensajes enviados, sin saber si fueron entregados, tal vez deberia guardarse tras una confirmacion de baileys 
