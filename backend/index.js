@@ -30,8 +30,8 @@ async function connectToDatabase() {
     console.error('Error connecting to MongoDB:', err);
   }
 }
-
 connectToDatabase()
+
 /*
 const pool = new Pool({
   user: 'postgres',
@@ -96,19 +96,6 @@ app.post('/api/messages', async (req, res) => {
   }
 })
 
-app.get('/api/test-mongodb', async (req, res) => {
-  try {
-    if (!collection) { // Check if collection is defined
-        console.error("MongoDB collection is not defined. Check connection.");
-        return res.status(500).send("Database error");
-      }
-    const messages = await collection.find().toArray();
-    res.json(messages);
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    res.status(500).send("Error fetching data");
-  }
-});
 
 
 //app.post('/api/messages', async (req, res) => {
