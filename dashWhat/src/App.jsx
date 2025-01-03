@@ -4,8 +4,6 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea'
-
-
   
 const App = () => {
   const [chats, setChats] = useState([])
@@ -13,49 +11,58 @@ const App = () => {
   const [messageText, setMessageText] = useState('')
   const socketRef = useRef()
   
-  
+  useEffect(() => {
+    socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
+    
+    socketRef.current.on('new-message', (messageData) => {      
+      setChats((prevChats) => {
+        const incomingJid = messageData.key.remoteJid
+        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);
+        
+        if (chatIndex !== -1) {
+          // Create a new array with the updated chat
+          const updatedChats = [...prevChats];
+          updatedChats[chatIndex] = {
+            ...updatedChats[chatIndex],
+            message: messageData.message,
+            messageTimestamp: messageData.messageTimestamp,
+          }
+          
+          // Sort the new array
+          return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp));
+        } else {
+          return [
+            {
+              remoteJid: incomingJid,
+              message: messageData.message,
+              messageTimestamp: messageData.messageTimestamp,
+            },
+            ...prevChats,
+          ].sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp))
+        }
+      })
+    })
+    return () => {
+      socketRef.current.disconnect();
+    }
+  }, [])
+
   useEffect(() => {
     
     // Solicitar el historial de mensajes al servidor
-    fetch('http://localhost:5000/api/messages/history')
+    fetch('http://localhost:5000/api/all-chats')
     .then(response => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`)
         }
         return response.json();
     })
-    .then(dataChatList => {setChats(dataChatList)                            
-    })
-    .catch(error => console.error('Error fetching message history:', error))
-
-    socketRef.current = io('http://localhost:5000', {
-      transports: ['websocket'],
-    })
     
-    // Maneja nuevos mensajes 
-    socketRef.current.on('message-from-baileys', (messageData) => {
-      setChats((prevChats) => {
-        const updatedChats = { ...prevChats };
-        const remoteJid = Object.keys(messageData)[0]; // Get the remoteJid
-        const newMessage = messageData[remoteJid];      // Get the message object
-    
-        if (!updatedChats[remoteJid]) {
-          updatedChats[remoteJid] = [newMessage];
-        } else {
-          updatedChats[remoteJid].push(newMessage);
-        }
-        console.log(updatedChats)
-        return updatedChats;
-      });
-    });
-    
-    
-    
-    
-    
-    return () => {      
-      socketRef.current.disconnect()
-    }
+    .then(dataChatList => {setChats(dataChatList)
+    console.log("Data fetched from server:", dataChatList)
+    })    
+    .catch(error => console.error('Error fetching message history:', error))  
+       
   }, [])
 
   const handleChatClick = (remoteJid) => {
@@ -68,9 +75,9 @@ const App = () => {
 
   const handleSendMessage = () => {
     if (selectedChat && messageText) {
-      const myWhatsAppNumberInside = myWhatsAppNumber;
+      
       const messageUser = {
-        sender: myWhatsAppNumberInside,
+        
         recipient: selectedChat,
         text: messageText,        
         fromMe: true
@@ -81,16 +88,7 @@ const App = () => {
       // Añadir el mensaje enviado al estado de chats en función de recipient
       setChats((prevChats) => {
         const updatedChats = { ...prevChats }
-  
-        if (!updatedChats[selectedChat]) {
-          updatedChats[selectedChat] = []
-        }
-  
-        updatedChats[selectedChat].push({
-          sender: myWhatsAppNumberInside,
-          recipient: selectedChat,
-          text: messageText,          
-        })
+     
   
         return updatedChats
       })
