@@ -1,24 +1,19 @@
-import 'dotenv/config'
 import express from 'express'
 import http from 'http'
-import { Server } from 'socket.io'
+import { Server } from 'socket.io' 
 import cors from 'cors'
-import pkg from 'pg'
 
-const { Pool } = pkg
-const app = express();
+import { MongoClient} from 'mongodb'
+
+
+
+
+
+const app = express()
 const server = http.createServer(app)
+app.use(express.json())
 
-//configura db
-const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'dash',
-  password: process.env.PASS_DB,
-  port: 5432,
-})
-
-// Configurar CORS para socket.io
+// Declara Socket.io y Configurar CORS
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173', 
@@ -28,78 +23,141 @@ const io = new Server(server, {
   }
 })
 
-// Middleware para manejar CORS en Express (para cualquier otra ruta)
+// Middleware para manejar CORS en Express 
 app.use(cors({
   origin: 'http://localhost:5173',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }))
-app.use(express.json());
+
+//configura Mongodb
+const uri = "mongodb+srv://xjuanmaromerox:l5beLvmJ2Kgfyab5@cluster0.ubphg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+const client = new MongoClient(uri)
+
+let collection
+
+async function connectToDatabase() {
+  try {
+
+    await client.connect();
+    console.log('Connected to MongoDB')
+    const db = client.db('dash') 
+    collection = db.collection('chats') 
+
+  } catch (err) {
+    console.error('Error connecting to MongoDB:', err);
+  }
+}
+connectToDatabase()
 
 // Ruta para obtener el historial de mensajes
-app.get('/api/messages/history', async (req, res) => {
+app.get('/api/all-chats', async (req, res) => {
   try {
-    // Realizar la consulta a la base de datos
-    const result = await pool.query('SELECT * FROM messages ORDER BY timestamp DESC')
-    //console.log('Message history fetched from DB:', result.rows);
-    res.json(result.rows) // Enviar el resultado como JSON
+    
+    const allChats = await collection.find({}).toArray();
+
+    const transformedChats = allChats.map(chat => {
+      const messages = Object.values(chat).filter(val => typeof val === 'object' && val !== null && 'messageTimestamp' in val)
+      
+      if (messages.length === 0) {
+        return { remoteJid: chat.remoteJid, message: null, messageTimestamp: null }
+      }
+
+      const latestMessage = messages.reduce((latest, current) => {
+        return new Date(latest.messageTimestamp) > new Date(current.messageTimestamp) ? latest : current;
+      })
+
+      return {
+        remoteJid: chat.remoteJid,
+        message: latestMessage.message,
+        messageTimestamp: latestMessage.messageTimestamp,
+      }
+    })
+    
+    // Sort the transformedChats based on the latest message timestamp
+    transformedChats.sort((chatA, chatB) => {
+      const timestampA = chatA.messageTimestamp ? new Date(chatA.messageTimestamp) : 0;
+      const timestampB = chatB.messageTimestamp ? new Date(chatB.messageTimestamp) : 0;
+      return timestampB - timestampA;
+  })
+
+    res.json(transformedChats)
   } catch (err) {
-    console.error('Error fetching message history', err);
-    res.status(500).send('Error fetching message history');
+    console.error('Error fetching all chats:', err)
+    res.status(500).send('Error fetching all chats')
   }
 })
 
-// Ruta REST para recibir mensajes de Baileys
-app.post('/api/messages', async (req, res) => {
-  const { sender, text, timestamp } = req.body
-  const recipient = '595985214420@s.whatsapp.net'  // Estableciendo el recipient directamente
-
+//ruta para obtener el historial de un chat especifico
+app.get('/api/messages/:remoteJid', async (req, res) => {
   try {
-    // Guarda el mensaje en la base de datos
-    await pool.query(
-      'INSERT INTO messages (sender, text, timestamp, recipient) VALUES ($1, $2, $3, $4)',
-      [sender, text, new Date(timestamp), recipient]
-    )
-    
-    console.log('Mensaje almacenado en la DB:', { sender, text, timestamp, recipient })
-    io.emit('new-message', { sender, text, timestamp, recipient })
-    res.sendStatus(200)   
+    const remoteJid = req.params.remoteJid;
+    const chat = await collection.findOne({ remoteJid: remoteJid });
 
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Extract messages and convert to array
+    const messages = Object.values(chat).filter(
+      (val) => typeof val === 'object' && val !== null && 'messageTimestamp' in val
+    )
+        // Sort messages by timestamp
+        messages.sort((a, b) => new Date(a.messageTimestamp) - new Date(b.messageTimestamp))
+    res.json(messages);
   } catch (err) {
-    console.error('Error al almacenar el mensaje', err)
+    console.error('Error fetching messages for chat:', err);
+    res.status(500).send('Error fetching messages for chat');
+  }
+})
+
+// Ruta REST para recibir mensajes emitidos de Baileys, reenviados a Frontend y para guardar en db 
+app.post('/api/messages', async (req, res) => {
+  const messageData = req.body.message
+  
+  try {
+    const remoteJid = messageData.key.remoteJid
+    const messageID = messageData.key.id
+     // Convert messageTimestamp to ISO date string if it's a number (unix epoch timestamp)
+    if (typeof messageData.messageTimestamp === 'number') {
+        messageData.messageTimestamp = new Date(messageData.messageTimestamp * 1000).toISOString(); 
+    } 
+
+    const result = await collection.updateOne(
+      { remoteJid: remoteJid },
+      {
+        $set: { [messageID]: messageData },
+        $setOnInsert: { remoteJid: remoteJid} 
+      },
+      { upsert: true }
+    )
+    const transformedMessage = { ...messageData, _id: result.upsertedId ? result.upsertedId._id : null };
+    
+    console.log(transformedMessage)
+    io.emit('new-message', transformedMessage)
+    res.sendStatus(200)
+    }
+    catch (err) {
+    console.error('Error storing message in MongoDB', err)
     res.status(500).send('Error storing message')
   }
 })
 
-// coneccion con websocket
-io.on('connection', (socket) => {
-  console.log('A user connected')
-
-  // Manejo de envío de mensajes desde el frontend
-  socket.on('send-message', async ({ sender, recipient, text }) => {
-    try {
-      const timestamp = new Date().toISOString()
-
-      // Guardar el mensaje en la base de datos
-      await pool.query(
-        'INSERT INTO messages (sender, text, timestamp, recipient) VALUES ($1, $2, $3, $4)',
-        [sender, text, timestamp, recipient]
-      )
-      console.log('Message stored in DB:', { sender, recipient, text, timestamp });
-
-      // Enviar el mensaje a Baileys para ser reenviado a WhatsApp
-      io.emit('send-whatsapp-message', { remoteJid: recipient, message: text })
-
-    } catch (err) {
-      console.error('Error storing message', err)
-    }
-  }) 
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected')
-  })
+// Ruta REST para recibir mensajes emitidos de Frontend, reenviados a Baileys
+io.on('send-message-from-frontend', async (messageData) => {
+  try {
+      const { remoteJid, message } = messageData;
+      console.log(messageData)
+      //await socket.sendMessage(remoteJid, { text: message });
+      // Emit the message back to the frontend to update all connected clients
+      // ... (your existing logic to emit 'new-message' event)
+  } catch (error) {
+      console.error('Error sending message:', error);
+  }
 })
 
-server.listen(5500, () => {
-  console.log('Server is listening on port 5500')
+server.listen(5000, () => {
+  console.log('Server is listening on port 5000')
 })
+
+
