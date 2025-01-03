@@ -102,7 +102,7 @@ const App = () => {
       <div className="flex flex-col flex-1">
         <Header />
         <div className="flex flex-1 overflow-y-auto">
-        <ChatList chats={chats} handleChatClick={handleChatClick} />
+          <ChatList chats={chats} handleChatClick={handleChatClick} />
           <ChatArea
              selectedChat={selectedChat}
              chats={chats} 

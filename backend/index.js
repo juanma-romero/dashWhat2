@@ -82,6 +82,29 @@ app.get('/api/all-chats', async (req, res) => {
   }
 })
 
+//ruta para obtener el historial de un chat especifico
+app.get('/api/messages/:remoteJid', async (req, res) => {
+  try {
+    const remoteJid = req.params.remoteJid;
+    const chat = await collection.findOne({ remoteJid: remoteJid });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Extract messages and convert to array
+    const messages = Object.values(chat).filter(
+      (val) => typeof val === 'object' && val !== null && 'messageTimestamp' in val
+    )
+        // Sort messages by timestamp
+    messages.sort((a, b) => new Date(a.messageTimestamp) - new Date(b.messageTimestamp))
+    res.json(messages);
+  } catch (err) {
+    console.error('Error fetching messages for chat:', err);
+    res.status(500).send('Error fetching messages for chat');
+  }
+})
+
 // Ruta REST para recibir mensajes emitidos de Baileys y emitidos de Frontend para guardar en db 
 app.post('/api/messages', async (req, res) => {
   const messageData = req.body.message
