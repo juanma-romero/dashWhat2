@@ -74,27 +74,43 @@ const App = () => {
 
   const handleSendMessage = () => {
     if (selectedChat && messageText) {
-      
-      const messageUser = {
-        
-        recipient: selectedChat,
-        text: messageText,        
-        fromMe: true
+      const newMessage = {
+        key: {
+          fromMe: true, // Important: Indicate the message is from the user
+          remoteJid: selectedChat, 
+        },
+        message: messageText,
+        messageTimestamp: new Date().toISOString(), // Add a timestamp
       }
-  
-      socketRef.current.emit('send-message-from-frontend', messageUser)
-  
-      // Añadir el mensaje enviado al estado de chats en función de recipient
-      setChats((prevChats) => {
-        const updatedChats = { ...prevChats }
-     
-  
-        return updatedChats
+      console.log(newMessage)
+      socketRef.current.emit('send-message-from-frontend', newMessage);
+
+      setChats(prevChats => {
+        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === selectedChat);
+
+        if (chatIndex !== -1) {
+          // Update existing chat
+          const updatedChats = [...prevChats];
+          updatedChats[chatIndex].messages = [...(prevChats[chatIndex].messages || []), newMessage] // Append to messages array
+
+
+          // ver ver ver !!!!!!!
+          //agrega el mensaje como una nueva propiedad con array como valor eso esta mal ver como deberia hacerse
+
+
+
+          console.log(updatedChats)
+          return updatedChats
+        } else {
+          // Create new chat if it doesn't exist. This is important if the chat list isn't entirely synced with backend.
+          return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp))
+        }
+        
       })
-  
-      setMessageText('')
+
+      setMessageText('');
     }
-  }
+}
 
   return (
     <div className="flex h-screen bg-gray-900">

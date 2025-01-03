@@ -4,11 +4,14 @@ import { Server } from 'socket.io'
 import cors from 'cors'
 import { MongoClient} from 'mongodb'
 
+
+
+
 const app = express()
 const server = http.createServer(app)
 app.use(express.json())
 
-// Configurar CORS para socket.io
+// Declara Socket.io y Configurar CORS
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173', 
@@ -44,7 +47,7 @@ async function connectToDatabase() {
 }
 connectToDatabase()
 
-// Ruta para obtener el historial de mensajes a enviar a Frontend
+// Ruta para obtener el historial de mensajes
 app.get('/api/all-chats', async (req, res) => {
   try {
     
@@ -97,7 +100,7 @@ app.get('/api/messages/:remoteJid', async (req, res) => {
       (val) => typeof val === 'object' && val !== null && 'messageTimestamp' in val
     )
         // Sort messages by timestamp
-    messages.sort((a, b) => new Date(a.messageTimestamp) - new Date(b.messageTimestamp))
+        messages.sort((a, b) => new Date(a.messageTimestamp) - new Date(b.messageTimestamp))
     res.json(messages);
   } catch (err) {
     console.error('Error fetching messages for chat:', err);
@@ -105,7 +108,7 @@ app.get('/api/messages/:remoteJid', async (req, res) => {
   }
 })
 
-// Ruta REST para recibir mensajes emitidos de Baileys y emitidos de Frontend para guardar en db 
+// Ruta REST para recibir mensajes emitidos de Baileys, reenviados a Frontend y para guardar en db 
 app.post('/api/messages', async (req, res) => {
   const messageData = req.body.message
   
@@ -134,6 +137,19 @@ app.post('/api/messages', async (req, res) => {
     catch (err) {
     console.error('Error storing message in MongoDB', err)
     res.status(500).send('Error storing message')
+  }
+})
+
+// Ruta REST para recibir mensajes emitidos de Frontend, reenviados a Baileys
+io.on('send-message-from-frontend', async (messageData) => {
+  try {
+      const { remoteJid, message } = messageData;
+      console.log(messageData)
+      //await socket.sendMessage(remoteJid, { text: message });
+      // Emit the message back to the frontend to update all connected clients
+      // ... (your existing logic to emit 'new-message' event)
+  } catch (error) {
+      console.error('Error sending message:', error);
   }
 })
 
