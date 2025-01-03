@@ -59,7 +59,6 @@ const App = () => {
     })
     
     .then(dataChatList => {setChats(dataChatList)
-    console.log("Data fetched from server:", dataChatList)
     })    
     .catch(error => console.error('Error fetching message history:', error))  
        

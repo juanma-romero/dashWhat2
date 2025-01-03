@@ -87,7 +87,7 @@ app.post('/api/messages', async (req, res) => {
   const messageData = req.body.message
   
   try {
-    const { remoteJid} = messageData.remoteJid;
+    const remoteJid = messageData.key.remoteJid
     const messageID = messageData.key.id
      // Convert messageTimestamp to ISO date string if it's a number (unix epoch timestamp)
     if (typeof messageData.messageTimestamp === 'number') {

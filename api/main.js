@@ -41,13 +41,13 @@ async function connectToWhatsApp () {
     
             for (const message of messages) {
                 if (message && message.key && message.message) { // Check if message and key exist
-                    const { remoteJid } = message.key;
-                    let textMessage;
+                    const { remoteJid } = message.key
+                    let textMessage
     
                     if (message.message.conversation) {
                         textMessage = message.message.conversation;
                     } else if (message.message.extendedTextMessage && message.message.extendedTextMessage.text) {
-                        textMessage = message.message.extendedTextMessage.text;
+                        textMessage = message.message.extendedTextMessage.text
                     }
     
                     // Proceed only if textMessage is defined (it's a text message)
@@ -57,7 +57,7 @@ async function connectToWhatsApp () {
                             remoteJid.endsWith('@g.us') ||
                             message.protocolMessage // Filter out protocol messages
                         ) {
-                            continue; // Skip these messages
+                            continue
                         }
     
                         const messageData = {

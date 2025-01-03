@@ -12,7 +12,7 @@ const ChatList = ({ chats, handleChatClick }) => {
             onClick={() => handleChatClick(chat.remoteJid)}
             className="bg-slate-700 p-3 rounded-md cursor-pointer hover:bg-slate-500"
           >
-            {console.log("Rendering chat:", chat.remoteJid)}
+            
             <div className="flex justify-between items-center">
               <p className="text-slate-200 font-semibold truncate">{chat.remoteJid}</p>
               {chat.messageTimestamp && (
