@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
+
 import Header from './Header'
 import Sidebar from './Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea'
+
   
 const App = () => {
   const [chats, setChats] = useState([])
@@ -12,9 +14,11 @@ const App = () => {
   const socketRef = useRef()
   
   useEffect(() => {
+
     socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
     
     socketRef.current.on('new-message', (messageData) => {      
+
       setChats((prevChats) => {
         const incomingJid = messageData.key.remoteJid
         const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);
@@ -47,70 +51,7 @@ const App = () => {
     }
   }, [])
 
-  useEffect(() => {
-    
-    // Solicitar el historial de mensajes al servidor
-    fetch('http://localhost:5000/api/all-chats')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        return response.json();
-    })
-    
-    .then(dataChatList => {setChats(dataChatList)
-    })    
-    .catch(error => console.error('Error fetching message history:', error))  
-       
-  }, [])
 
-  const handleChatClick = (remoteJid) => {
-    setSelectedChat(remoteJid)
-  }
-
-  const handleMessageChange = (e) => {
-    setMessageText(e.target.value);
-  }
-
-  const handleSendMessage = () => {
-    if (selectedChat && messageText) {
-      const newMessage = {
-        key: {
-          fromMe: true, // Important: Indicate the message is from the user
-          remoteJid: selectedChat, 
-        },
-        message: messageText,
-        messageTimestamp: new Date().toISOString(), // Add a timestamp
-      }
-      console.log(newMessage)
-      socketRef.current.emit('send-message-from-frontend', newMessage);
-
-      setChats(prevChats => {
-        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === selectedChat);
-
-        if (chatIndex !== -1) {
-          // Update existing chat
-          const updatedChats = [...prevChats];
-          updatedChats[chatIndex].messages = [...(prevChats[chatIndex].messages || []), newMessage] // Append to messages array
-
-
-          // ver ver ver !!!!!!!
-          //agrega el mensaje como una nueva propiedad con array como valor eso esta mal ver como deberia hacerse
-
-
-
-          console.log(updatedChats)
-          return updatedChats
-        } else {
-          // Create new chat if it doesn't exist. This is important if the chat list isn't entirely synced with backend.
-          return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp))
-        }
-        
-      })
-
-      setMessageText('');
-    }
-}
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -118,13 +59,13 @@ const App = () => {
       <div className="flex flex-col flex-1">
         <Header />
         <div className="flex flex-1 overflow-y-auto">
-          <ChatList chats={chats} handleChatClick={handleChatClick} />
+          <ChatList chats={chats} handleChatClick={(chat) => utils.handleChatClick(chat, setSelectedChat)} />
           <ChatArea
-             selectedChat={selectedChat}
-             chats={chats} 
-             messageText={messageText}
-             handleMessageChange={handleMessageChange}
-             handleSendMessage={handleSendMessage}           
+            selectedChat={selectedChat}
+            chats={chats}
+            messageText={messageText}
+            handleMessageChange={(e) => utils.handleMessageChange(e, setMessageText)}
+            handleSendMessage={() => utils.sendMessage({ selectedChat, messageText, socketRef, myWhatsAppNumber, setChats })}
           />
         </div>
       </div>

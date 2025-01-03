@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 
 const ChatList = ({ chats, handleChatClick }) => {

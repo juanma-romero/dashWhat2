@@ -16,8 +16,10 @@ async function connectToWhatsApp () {
     })
 
     // maneja las credenciales
+
     sock.ev.on('creds.update', saveCreds)         
     
+
     // maneja la coneccion de baileys
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update
@@ -31,9 +33,8 @@ async function connectToWhatsApp () {
         } else if(connection === 'open') {
             console.log('opened connection')
         }
-    })    
-    
-    
+    })     
+ 
     sock.ev.on('messages.upsert', async m => {
         console.log(JSON.stringify(m, undefined, 2))
         try {
@@ -60,6 +61,7 @@ async function connectToWhatsApp () {
                             continue
                         }
     
+
                         const messageData = {
                             key: message.key,
                             message: textMessage,
@@ -69,6 +71,7 @@ async function connectToWhatsApp () {
                         await axios.post('http://localhost:5000/api/messages', { message: messageData })                      
                     }
                 }
+
             }
         } catch (error) {
             console.error('Error processing message:', error);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react'
 
 const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMessage }) => {
@@ -60,4 +61,3 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
 }
 
 export default ChatArea;
-
