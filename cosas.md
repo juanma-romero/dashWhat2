@@ -115,6 +115,7 @@ This lets you see the state immediately after the update and check if the chat h
 
 By carefully examining the remoteJid at each stage and reviewing your data handling, you'll isolate the cause of this inconsistency. Focus on ensuring consistent remoteJid values and handling any edge cases where the initial fetch might not provide all the necessary data. If you continue to have problems, please share the following:
 
+
 The relevant code snippet from your /api/all-chats route where you extract the initial chat data.
 The code in App.jsx where you handle the 'new-message' event and update the chats state.
 The complete console output from both the backend and frontend when the error occurs.

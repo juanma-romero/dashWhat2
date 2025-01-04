@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
+
 import Header from './Header'
 import Sidebar from './Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea'
+
   
 const App = () => {
   const [chats, setChats] = useState([])
@@ -13,9 +15,11 @@ const App = () => {
   const [messagesRespuesta, setMessagesRespuesta] = useState([])
   
   useEffect(() => {
+
     socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
     
     socketRef.current.on('new-message', (messageData) => {      
+
       setChats((prevChats) => {
         const incomingJid = messageData.key.remoteJid
         const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);

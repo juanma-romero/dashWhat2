@@ -2,6 +2,7 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io' 
 import cors from 'cors'
+
 import { MongoClient} from 'mongodb'
 
 const app = express()
@@ -33,6 +34,7 @@ let collection
 
 async function connectToDatabase() {
   try {
+
     await client.connect();
     console.log('Connected to MongoDB')
     const db = client.db('dash') 
@@ -168,4 +170,5 @@ io.on("connection", (socket) => {
 server.listen(5000, () => {
   console.log('Server is listening on port 5000')
 })
+
 
