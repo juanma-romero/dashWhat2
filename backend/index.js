@@ -5,10 +5,6 @@ import cors from 'cors'
 
 import { MongoClient} from 'mongodb'
 
-
-
-
-
 const app = express()
 const server = http.createServer(app)
 app.use(express.json())
@@ -156,8 +152,8 @@ io.on('send-message-from-frontend', async (messageData) => {
   }
 })
 
-server.listen(5000, () => {
-  console.log('Server is listening on port 5000')
+const port = process.env.PORT || 5000; // Default to 5000 if PORT is not set
+server.listen(port, () => {
+    console.log(`Server is listening on port ${port}`);
 })
-
 

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
-
-import Header from './Header'
-import Sidebar from './Sidebar'
+import Header from './components/Header'
+import Sidebar from './components/Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea'
 
@@ -15,7 +14,7 @@ const App = () => {
   
   useEffect(() => {
 
-    socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
+    socketRef.current = io('http://localhost:8080', { transports: ['websocket'] })    
     
     socketRef.current.on('new-message', (messageData) => {      
 

@@ -1,0 +1,19 @@
+{
+  "name": "cloudrun",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "Juanma",
+  "type": "module",
+  "main": "placeholder.js",
+  "engines": {
+    "node": "22.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
