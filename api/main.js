@@ -1,13 +1,13 @@
 import {makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
 import axios from 'axios'
-//import { io } from 'socket.io-client'
+import express from 'express'
+
+const app = express() // Initialize the express app
+app.use(express.json())
 
 async function connectToWhatsApp () {
 
-    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')    
-    
-    // Configurar conexión de WebSocket con el backend
-    /*const socket = io('http://localhost:5000') */
+    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')   
 
     const sock = makeWASocket({
         // can provide additional config here
@@ -34,7 +34,7 @@ async function connectToWhatsApp () {
     })    
     
     
-    sock.ev.on('messages.upsert', async m => {
+    sock.ev.on('messages.upsert', async m => { 
         console.log(JSON.stringify(m, undefined, 2))
         try {
             const messages = m.messages;
@@ -63,7 +63,7 @@ async function connectToWhatsApp () {
                         const messageData = {
                             key: message.key,
                             message: textMessage,
-                            messageTimestamp: message.messageTimestamp,
+                            messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
                             pushName: message.pushName,
                         }    
                         await axios.post('http://localhost:5000/api/messages', { message: messageData })                      
@@ -74,6 +74,24 @@ async function connectToWhatsApp () {
             console.error('Error processing message:', error);
         }
     })   
-}
 
+    app.post('/send-message', async (req, res) => {
+        try {
+          const { remoteJid, message } = req.body; // Extract ONLY remoteJid and message text
+    
+          // Use Baileys to send the message.  The timestamp will be handled by Baileys.
+          await sock.sendMessage(remoteJid, { text: message }); 
+    
+          res.status(200).send('Message sent successfully');
+        } catch (error) {
+          console.error('Error sending message:', error);
+          res.status(500).send('Error sending message');
+        }
+    })
+}
 connectToWhatsApp()
+
+const port = 3000
+app.listen(port, () => {
+    console.log(`Baileys server listening on port ${port}`)
+})

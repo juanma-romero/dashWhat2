@@ -4,9 +4,6 @@ import { Server } from 'socket.io'
 import cors from 'cors'
 import { MongoClient} from 'mongodb'
 
-
-
-
 const app = express()
 const server = http.createServer(app)
 app.use(express.json())
@@ -116,10 +113,7 @@ app.post('/api/messages', async (req, res) => {
     const remoteJid = messageData.key.remoteJid
     const messageID = messageData.key.id
      // Convert messageTimestamp to ISO date string if it's a number (unix epoch timestamp)
-    if (typeof messageData.messageTimestamp === 'number') {
-        messageData.messageTimestamp = new Date(messageData.messageTimestamp * 1000).toISOString(); 
-    } 
-
+    
     const result = await collection.updateOne(
       { remoteJid: remoteJid },
       {
@@ -141,17 +135,35 @@ app.post('/api/messages', async (req, res) => {
 })
 
 // Ruta REST para recibir mensajes emitidos de Frontend, reenviados a Baileys
-io.on('send-message-from-frontend', async (messageData) => {
-  try {
-      const { remoteJid, message } = messageData;
-      console.log(messageData)
-      //await socket.sendMessage(remoteJid, { text: message });
-      // Emit the message back to the frontend to update all connected clients
-      // ... (your existing logic to emit 'new-message' event)
-  } catch (error) {
-      console.error('Error sending message:', error);
-  }
-})
+// Example using fetch or axios in your Cloud Run backend
+io.on("connection", (socket) => {
+  socket.on("send-message-from-frontend", async (msg) => {
+    try {
+      const response = await fetch('http://localhost:3000/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          remoteJid: msg.remoteJid,  
+          message: msg.message
+        }), 
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+
+      // Handle success (e.g., update database, send confirmation to frontend)
+
+    } catch (error) {
+      console.error('Error sending message to Baileys:', error);
+      // Handle error (e.g., send error message to frontend)
+    }
+  });
+});
+
+
 
 server.listen(5000, () => {
   console.log('Server is listening on port 5000')

@@ -9,7 +9,8 @@ const App = () => {
   const [chats, setChats] = useState([])
   const [selectedChat, setSelectedChat] = useState(null)
   const [messageText, setMessageText] = useState('')
-  const socketRef = useRef()
+  const socketRef = useRef(null)
+  const [messagesRespuesta, setMessagesRespuesta] = useState([])
   
   useEffect(() => {
     socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
@@ -42,6 +43,7 @@ const App = () => {
         }
       })
     })
+
     return () => {
       socketRef.current.disconnect();
     }
@@ -74,43 +76,54 @@ const App = () => {
 
   const handleSendMessage = () => {
     if (selectedChat && messageText) {
+      //construye mensaje a enviar
       const newMessage = {
         key: {
-          fromMe: true, // Important: Indicate the message is from the user
-          remoteJid: selectedChat, 
+          fromMe: true,
+          remoteJid: selectedChat,
+          id: Math.random().toString(36).substring(2, 15), // Temporary client-side ID
         },
-        message: messageText,
-        messageTimestamp: new Date().toISOString(), // Add a timestamp
-      }
-      console.log(newMessage)
-      socketRef.current.emit('send-message-from-frontend', newMessage);
-
-      setChats(prevChats => {
-        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === selectedChat);
-
+        message: messageText, 
+        messageTimestamp: new Date().toISOString(),
+        remoteJid: selectedChat        
+      }      
+      
+      //envia mensaje a backend
+      socketRef.current.emit('send-message-from-frontend',newMessage)
+      //actualiza ChatList
+      setChats((prevChats) => {
+        const chatIndex = prevChats.findIndex((chat) => chat.remoteJid === selectedChat);
+  
         if (chatIndex !== -1) {
-          // Update existing chat
           const updatedChats = [...prevChats];
-          updatedChats[chatIndex].messages = [...(prevChats[chatIndex].messages || []), newMessage] // Append to messages array
-
-
-          // ver ver ver !!!!!!!
-          //agrega el mensaje como una nueva propiedad con array como valor eso esta mal ver como deberia hacerse
-
-
-
-          console.log(updatedChats)
-          return updatedChats
+          updatedChats[chatIndex] = {
+            ...updatedChats[chatIndex], 
+            message: newMessage.message,     
+            messageTimestamp: newMessage.messageTimestamp,
+          }
+  
+          return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp));
         } else {
-          // Create new chat if it doesn't exist. This is important if the chat list isn't entirely synced with backend.
-          return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp))
+          // This case shouldn't happen ideally, but it's good to handle it
+          return [
+            {
+              remoteJid: selectedChat,
+              message: newMessage.message,
+              messageTimestamp: newMessage.messageTimestamp,
+            },
+            ...prevChats,
+          ].sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp));
         }
-        
       })
-
-      setMessageText('');
+      // limpia campo de envio de mensaje  
+      setMessageText('')
+      // carga mensaje en state para renderizar dentro de ChatArea
+      if (selectedChat) { // Check if a chat is selected
+        setMessagesRespuesta(prevMessages => [...prevMessages, newMessage])
+      }
     }
-}
+  }
+  
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -118,13 +131,18 @@ const App = () => {
       <div className="flex flex-col flex-1">
         <Header />
         <div className="flex flex-1 overflow-y-auto">
-          <ChatList chats={chats} handleChatClick={handleChatClick} />
+          <ChatList 
+            chats={chats} 
+            handleChatClick={handleChatClick}
+            selectedChat={selectedChat}
+            
+            />
           <ChatArea
-             selectedChat={selectedChat}
-             chats={chats} 
-             messageText={messageText}
-             handleMessageChange={handleMessageChange}
-             handleSendMessage={handleSendMessage}           
+            messagesRespuesta={messagesRespuesta}
+            selectedChat={selectedChat}
+            messageText={messageText}
+            handleMessageChange={handleMessageChange}
+            handleSendMessage={handleSendMessage}           
           />
         </div>
       </div>
