@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
-
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import ChatList from './components/ChatList'

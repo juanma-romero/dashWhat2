@@ -4,7 +4,7 @@ const ChatList = ({ chats, handleChatClick, selectedChat }) => {
     
   return (
     <div 
-      className="p-4 w-80 overflow-y-auto bg-slate-600">
+      className="p-4 w-1/4 overflow-y-auto bg-slate-600">
         <h2 className="text-xl font-semibold mb-4 text-slate-200">Chats</h2>
         <ul className="space-y-2">
           {chats.map(chat => (
