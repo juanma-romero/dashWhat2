@@ -11,7 +11,8 @@ const App = () => {
   const [chats, setChats] = useState([])
   const [selectedChat, setSelectedChat] = useState(null)
   const [messageText, setMessageText] = useState('')
-  const socketRef = useRef()
+  const socketRef = useRef(null)
+  const [messagesRespuesta, setMessagesRespuesta] = useState([])
   
   useEffect(() => {
 
@@ -46,12 +47,87 @@ const App = () => {
         }
       })
     })
+
     return () => {
       socketRef.current.disconnect();
     }
   }, [])
 
+  useEffect(() => {
+    
+    // Solicitar el historial de mensajes al servidor
+    fetch('http://localhost:5000/api/all-chats')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.json();
+    })
+    
+    .then(dataChatList => {setChats(dataChatList)
+    })    
+    .catch(error => console.error('Error fetching message history:', error))  
+       
+  }, [])
 
+  const handleChatClick = (remoteJid) => {
+    setSelectedChat(remoteJid)
+  }
+
+  const handleMessageChange = (e) => {
+    setMessageText(e.target.value);
+  }
+
+  const handleSendMessage = () => {
+    if (selectedChat && messageText) {
+      //construye mensaje a enviar
+      const newMessage = {
+        key: {
+          fromMe: true,
+          remoteJid: selectedChat,
+          id: Math.random().toString(36).substring(2, 15), // Temporary client-side ID
+        },
+        message: messageText, 
+        messageTimestamp: new Date().toISOString(),
+        remoteJid: selectedChat        
+      }      
+      
+      //envia mensaje a backend
+      socketRef.current.emit('send-message-from-frontend',newMessage)
+      //actualiza ChatList
+      setChats((prevChats) => {
+        const chatIndex = prevChats.findIndex((chat) => chat.remoteJid === selectedChat);
+  
+        if (chatIndex !== -1) {
+          const updatedChats = [...prevChats];
+          updatedChats[chatIndex] = {
+            ...updatedChats[chatIndex], 
+            message: newMessage.message,     
+            messageTimestamp: newMessage.messageTimestamp,
+          }
+  
+          return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp));
+        } else {
+          // This case shouldn't happen ideally, but it's good to handle it
+          return [
+            {
+              remoteJid: selectedChat,
+              message: newMessage.message,
+              messageTimestamp: newMessage.messageTimestamp,
+            },
+            ...prevChats,
+          ].sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp));
+        }
+      })
+      // limpia campo de envio de mensaje  
+      setMessageText('')
+      // carga mensaje en state para renderizar dentro de ChatArea
+      if (selectedChat) { // Check if a chat is selected
+        setMessagesRespuesta(prevMessages => [...prevMessages, newMessage])
+      }
+    }
+  }
+  
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -59,13 +135,18 @@ const App = () => {
       <div className="flex flex-col flex-1">
         <Header />
         <div className="flex flex-1 overflow-y-auto">
-          <ChatList chats={chats} handleChatClick={(chat) => utils.handleChatClick(chat, setSelectedChat)} />
-          <ChatArea
+          <ChatList 
+            chats={chats} 
+            handleChatClick={handleChatClick}
             selectedChat={selectedChat}
-            chats={chats}
+            
+            />
+          <ChatArea
+            messagesRespuesta={messagesRespuesta}
+            selectedChat={selectedChat}
             messageText={messageText}
-            handleMessageChange={(e) => utils.handleMessageChange(e, setMessageText)}
-            handleSendMessage={() => utils.sendMessage({ selectedChat, messageText, socketRef, myWhatsAppNumber, setChats })}
+            handleMessageChange={handleMessageChange}
+            handleSendMessage={handleSendMessage}           
           />
         </div>
       </div>
