@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
 
-import Header from './Header'
-import Sidebar from './Sidebar'
+import Header from './components/Header'
+import Sidebar from './components/Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea'
 
-  
+
 const App = () => {
   const [chats, setChats] = useState([])
   const [selectedChat, setSelectedChat] = useState(null)

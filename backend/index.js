@@ -2,8 +2,11 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io' 
 import cors from 'cors'
-
+import dotenv from 'dotenv'
 import { MongoClient} from 'mongodb'
+dotenv.config()
+const uri = process.env.MONGODB_URI
+
 
 const app = express()
 const server = http.createServer(app)
@@ -27,7 +30,7 @@ app.use(cors({
 }))
 
 //configura Mongodb
-const uri = "mongodb+srv://xjuanmaromerox:l5beLvmJ2Kgfyab5@cluster0.ubphg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
 const client = new MongoClient(uri)
 
 let collection
