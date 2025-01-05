@@ -18,7 +18,9 @@ const ChatList = ({ chats, handleChatClick, selectedChat }) => {
             >
               
               <div className="flex justify-between items-center">
-                <p className="text-slate-200 font-semibold truncate">{chat.remoteJid}</p>
+                <p className="text-slate-200 font-semibold truncate">
+                  {chat.contact ? `${chat.contact.firstName} ${chat.contact.lastName}` : chat.remoteJid}
+                </p>
                 {chat.messageTimestamp && (
                   <span className="text-xs text-gray-400">
                     {format(new Date(chat.messageTimestamp), 'HH:mm')}

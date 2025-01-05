@@ -34,15 +34,15 @@ app.use(cors({
 const client = new MongoClient(uri)
 
 let collection
+let collectionContacto
 
 async function connectToDatabase() {
   try {
-
     await client.connect();
     console.log('Connected to MongoDB')
     const db = client.db('dash') 
     collection = db.collection('chats') 
-
+    collectionContacto = db.collection('contactosGoogle')
   } catch (err) {
     console.error('Error connecting to MongoDB:', err);
   }
@@ -50,11 +50,10 @@ async function connectToDatabase() {
 connectToDatabase()
 
 // Ruta para obtener el historial de mensajes
-app.get('/api/all-chats', async (req, res) => {
-  try {
-    
-    const allChats = await collection.find({}).toArray();
 
+app.get('/api/all-chats', async (req, res) => {
+  try {    
+    const allChats = await collection.find({}).toArray()
     const transformedChats = allChats.map(chat => {
       const messages = Object.values(chat).filter(val => typeof val === 'object' && val !== null && 'messageTimestamp' in val)
       
@@ -80,12 +79,31 @@ app.get('/api/all-chats', async (req, res) => {
       return timestampB - timestampA;
   })
 
-    res.json(transformedChats)
+  // Fetch contacts related to the chats
+  const remoteJids = transformedChats.map(chat => chat.remoteJid);
+  const contactosChat = await collectionContacto.find({ Phone: { $in: remoteJids } }).toArray()
+  
+  // Combine chats and contacts
+  const combinedChats = transformedChats.map(chat => {
+    const contact = contactosChat.find(c => c.Phone === chat.remoteJid);
+    return {
+      ...chat, // Spread existing chat properties
+      contact: contact ? {  // Add contact info conditionally
+        firstName: contact['First Name'],
+        lastName: contact['Last Name'],
+        // ... other contact fields
+      } : null // or null if no contact found
+    };
+  });
+
+  res.json(combinedChats)
+    
   } catch (err) {
     console.error('Error fetching all chats:', err)
     res.status(500).send('Error fetching all chats')
   }
 })
+
 
 //ruta para obtener el historial de un chat especifico
 app.get('/api/messages/:remoteJid', async (req, res) => {
@@ -166,9 +184,7 @@ io.on("connection", (socket) => {
       // Handle error (e.g., send error message to frontend)
     }
   });
-});
-
-
+})
 
 server.listen(5000, () => {
   console.log('Server is listening on port 5000')
