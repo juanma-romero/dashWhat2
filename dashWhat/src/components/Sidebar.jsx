@@ -1,102 +1,205 @@
-import React, { useState } from 'react'
-import imgUrl from '/juanmaAI.png'
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid'
+import React, { useState, useEffect } from 'react'  
+import { v4 as uuidv4 } from 'uuid'
 
-const Sidebar = () => {
-  const [orderStatus, setOrderStatus] = useState('No Leído')
-  const customerData = {
-    name: "Juanma Romero",
-    ruc: "5120189-5",
-    imageUrl: imgUrl, // Placeholder image URL
-    contact: "595981123123", // Replace with a realistic number
+const Sidebar = ({ selectedChat, products }) => {
+  // states de customer
+  const [customer, setCustomer] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)  
+  
+  // state de colapsable
+  const [isOrderCollapsed, setIsOrderCollapsed] = useState(true)
+
+  // states de ultimo pedido
+  const [lastOrder, setLastOrder] = useState(null);
+  const [lastOrderLoading, setLastOrderLoading] = useState(false);
+  const [lastOrderError, setLastOrderError] = useState(null)
+
+  // state de nuevo pedido
+  const [orderItems, setOrderItems] = useState([{ product: '', quantity: 1, price: 0 }])
+
+  const toggleOrderCollapse = () => {
+    setIsOrderCollapsed(!isOrderCollapsed);
   }
-  const statusOptions = [
-    { value: 'No Leído', color: 'bg-red-500' },
-    { value: 'Confirmado', color: 'bg-green-500' },
-    { value: 'Entregado', color: 'bg-blue-400' }, // Use a blue that is more visually distinct.
-    // Add more status options as needed.
-  ]
 
-  const orderItems = [
-    { product: 'Producto 1', quantity: 2, price: 15.50 },
-    { product: 'Producto 2', quantity: 1, price: 20.00 },
-  ];
+  const addOrderItem = () => {
+    setOrderItems([...orderItems, { id: uuidv4(), product: '', quantity: 1, price: 0 }])
+  }
 
-  const calculateTotal = () => {
-    return orderItems.reduce((total, item) => total + item.quantity * item.price, 0);
-  };
+  const handleProductChange = (index, productId) => {
+    setOrderItems(prevItems => {
+      const updatedItems = [...prevItems];
+      updatedItems[index].product = productId; // Correctly update product ID
+      const selectedProduct = products.find(p => p._id === productId); // Find selected product by _id
+      updatedItems[index].price = selectedProduct ? selectedProduct.price : 0; // Update price
+      return updatedItems;
+    });
+  }
 
+  const handleQuantityChange = (index, event) => {
+    const newQuantity = parseInt(event.target.value, 10) || 0;
+    setOrderItems(prevItems => {
+      const updatedItems = [...prevItems];
+      updatedItems[index].quantity = newQuantity;
+      return updatedItems;
+    });
+  }
+
+  // carga datos cliente , luego ultimo pedido de ese cliente
+  useEffect(() => {
+    if (selectedChat) { // Only fetch if selectedChat is not null
+      setLoading(true); // Set loading to true before fetching
+      setError(null); // Reset any previous error
+        fetch(`http://localhost:5000/api/customer/${selectedChat}`)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`) // Throw error for non-2xx responses
+              }
+              return response.json()
+            })
+            .then(data => {
+                setCustomer(data);
+                setLoading(false); // Set loading to false after successful fetch
+            })
+            .catch(err => {                    
+                setError(err.message) // Handle errors
+                setLoading(false); // Set loading to false even if an error occurred
+                console.error("Fetch error:", err)
+            })
+            
+      // Fetch last order after customer data is fetched successfully
+      setLastOrderLoading(true);
+      setLastOrderError(null);
+      fetch(`http://localhost:5000/api/last-order/${selectedChat}`)
+        .then(response => {
+          if (!response.ok) {
+            if (response.status === 404) {
+              setLastOrder(null); // Set lastOrder to null to trigger the "No orders" message
+          } else {                            
+              throw new Error(`HTTP error! status: ${response.status}`); // Throw error for other status codes
+
+          }
+          }
+          return response.json()
+        })
+        .then(data => {
+          if(data){
+          setLastOrder(data)}
+          setLastOrderLoading(true)
+         
+        })
+        .catch(err => {
+          setLastOrderError(err.message)
+          setLastOrderLoading(false)
+          console.error("Error fetching last order:", err)
+        })
+    } else {
+        setCustomer(null) // Reset customer data if selectedChat becomes null
+        setLastOrder(null) // Reset last order data as well
+        setLastOrderLoading(false)
+        setLastOrderError(null)
+    }
+}, [selectedChat])
+ 
+  
   return (
     <div className="w-1/3 bg-gray-800 p-4">
-      <div className="flex items-center mb-4">
-        <img
-          src={customerData.imageUrl}
-          alt="Profile"
-          className="w-12 h-12 rounded-full mr-4"
-        />
-        <div>
-          <h2 className="text-xl text-white font-bold">{customerData.name}</h2>
-          <p className="text-gray-400">{customerData.ruc}</p>
-          <p className="text-gray-400">{customerData.contact}</p>
-        </div>
-      </div>
+      
+      {/* perfil cliente */}
+      {loading && <p>Loading customer data...</p>}
+            {error && <p className="text-red-500">Error: {error}</p>}
+            {customer && ( // Display customer data only when available
+                <div>
+                    <div className="flex items-center mb-4">                    
+                    <div>
+                      <h2 className="text-xl text-white font-bold">{customer.name}</h2>
+                      <p className="text-gray-400">{customer.phone}</p>
+                    </div>
+                  </div>
+                    <p>Nombre: {customer.name}</p>
+                    {/* ... other customer details ... */}
+                </div>
+            )}      
+ 
+      {/* Collapsible Last Order Section */}
+      <div className="mt-4">  {/* Add some top margin */}
+                <button
+                    type="button"
+                    onClick={toggleOrderCollapse}
+                    className="flex items-center justify-between w-full bg-gray-700 text-white font-medium py-2 px-4 rounded hover:bg-gray-600 focus:outline-none focus:ring focus:ring-gray-300"
+                >
+                    <span>Ver ultimo pedido</span>
+                    {/* Toggle icon */}
+                    {isOrderCollapsed ? (
+                        <ChevronDownIcon className="h-5 w-5" />
+                    ) : (
+                        <ChevronUpIcon className="h-5 w-5" />
+                    )}                    
+                </button>
+                {/* Conditionally render the last order details */}
+                {!isOrderCollapsed && ( // Show when not collapsed
+                    <div className="mt-2 border border-gray-600 rounded p-4"> {/* Styling */}
+                        {lastOrderLoading && <p>Loading last order...</p>}
+                        {lastOrderError && <p className="text-red-500">Error: {lastOrderError}</p>}
+                        {lastOrder && (
+                            <div>
+                                <p>Date: {new Date(lastOrder.fechaSolicitud).toLocaleString()}</p> {/* Format date */}
+                                <p>Delivery Date: {new Date(lastOrder.fechaEntrega).toLocaleString()}</p>
+                                <p>Product: {lastOrder.producto}</p>
+                                <p>Quantity: {lastOrder.cantidad}</p>
+                                <p>Status: {lastOrder.estado}</p>
+                                {/* ... display other order details ... */}
+                            </div>
+                        )}
+                        {!lastOrder && !lastOrderLoading && !lastOrderError && ( // Show when no orders are found after loading is complete and there are no errors
+                            <p>No previous orders found.</p>
+                        )}
 
-      <form> {/* Form structure remains, no actual submission */}
-        <h3 className="text-lg text-white font-bold mb-2">Nuevo Pedido</h3>
-        <input type="date" className="w-full p-2 border border-gray-600 rounded mb-2" />
 
-        {orderItems.map((item, index) => (
-          <div key={index} className="mb-2">
-            <input
-              type="text"
-              value={item.product}
-              readOnly // Prevent editing for now
-              className="w-full p-2 border border-gray-600 rounded mb-1"
-            />
-            <div className="flex">
-              <input
-                type="number"
-                value={item.quantity}
-                readOnly
-                className="w-1/3 p-2 border border-gray-600 rounded mr-2"
-              />
-              <input
-                type="number"
-                value={item.price}
-                readOnly
-                className="w-1/3 p-2 border border-gray-600 rounded mr-2"
-              />
-              <span className="w-1/3 p-2 text-center border border-gray-600 rounded">
-                {item.quantity * item.price}
-              </span>
+                    </div>
+                )}
             </div>
-          </div>
-        ))}
-        <div className="mt-4"> {/* Add some spacing */}
-          <label htmlFor="orderStatus" className="block text-white mb-2">Estado del Pedido:</label> {/* Add a label */}
-          <select
-            id="orderStatus"
-            value={orderStatus}
-            onChange={(e) => setOrderStatus(e.target.value)}
-            className="w-full p-2 border border-gray-600 rounded appearance-none" // Remove default appearance
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.value}
-              </option>
-            ))}
-          </select>
 
-          {/* Pill button display */}
-          <div className={`mt-2 inline-block px-3 py-1 rounded-full text-white ${statusOptions.find(opt => opt.value === orderStatus)?.color}`}>
-            {/* Find the corresponding color class for the selected status */}
-            {orderStatus} 
-          </div>
-        </div>
+      {/* Formulario pedido */}
+      <form>
+        <h3 className="text-lg text-white font-bold mb-2">Nuevo Pedido</h3>
+        {orderItems.map((item, index) => (
+                    <div key={item.id} className="flex mb-2">
+                        <select
+                            value={item.product}  // Bind to item.product (which will store _id as string)
+                            onChange={e => handleProductChange(index, e.target.value)} // Pass the product._id as String
+                            className="w-1/2 p-2 border border-gray-600 rounded mr-2"
+                        >
+                            <option value="">Seleccione Producto</option>
+                            {products.map(product => ( // Map over the products array
+                                <option key={product._id} value={product._id}>  {/* Use product.id for key and value */}
+                                    {product.Nombre} {/* Access nombre property of each product */}
 
-        <div className="font-bold text-white mt-4">Total: {calculateTotal()}</div>
+                                </option>
+                            ))}
+                        </select>
+                        <span className="w-1/4 p-2 text-center border border-gray-600 rounded mr-2"> {/* Added span */}
+                          {item.price}  {/* Display item.price */}
+                        </span>
+                        <input
+                            type="number"
+                            min="0" // Prevent negative numbers
+                            value={item.quantity}
+                            onChange={e => handleQuantityChange(index, e)}
+                            className="w-1/4 p-2 border border-gray-600 rounded mr-2"
+                        />
+                        <span className="w-1/4 p-2 text-center border border-gray-600 rounded">
+                            {item.quantity * item.price}
+                        </span>
+                    </div>
+                ))}
+                <button type="button" onClick={addOrderItem} className="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                  Agregar Producto
+                </button>        
       </form>
     </div>
-  );
-};
+  )
+}
 
 export default Sidebar;

@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 
-const ChatList = ({ chats, handleChatClick, selectedChat }) => { 
+const ChatList = ({ chats, handleChatClick, selectedChat }) => {  
     
   return (
     <div 
