@@ -1,25 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
-
-import Header from './Header'
-import Sidebar from './Sidebar'
+import Header from './components/Header'
+import Sidebar from './components/Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea'
 
-  
 const App = () => {
+  // para listado de chats y seleccion de chats
   const [chats, setChats] = useState([])
   const [selectedChat, setSelectedChat] = useState(null)
-  const [messageText, setMessageText] = useState('')
-  const socketRef = useRef(null)
-  const [messagesRespuesta, setMessagesRespuesta] = useState([])
   
+  const socketRef = useRef(null)
+
+  // para mensajes de usuario enviado
+  const [messagesRespuesta, setMessagesRespuesta] = useState([])
+  const [messageText, setMessageText] = useState('') 
+  
+  // para manejar listado productos
+  const [products, setProducts] = useState([]); // State to store products
+  const [productsLoading, setProductsLoading] = useState(true); // Loading state
+  const [productsError, setProductsError] = useState(null); // Error state
+  
+  // carga productos y precio unit al inicio de sesion
   useEffect(() => {
+    setProductsLoading(true);
+    setProductsError(null);
+    fetch('http://localhost:5000/api/products')  // Fetch product data
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        setProducts(data);
+        setProductsLoading(false);
+      })
+      .catch(error => {
+        setProductsError(error.message);
+        setProductsLoading(false);
+        console.error("Error fetching products:", error);
+      });
+  }, []); // Empty dependency array ensures this runs only once on mount
 
+  // conecta socket.io y recibe mensajes desde baileys
+  useEffect(() => {
     socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
-    
-    socketRef.current.on('new-message', (messageData) => {      
-
+    socketRef.current.on('new-message', (messageData) => {  
       setChats((prevChats) => {
         const incomingJid = messageData.key.remoteJid
         const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);
@@ -53,9 +80,8 @@ const App = () => {
     }
   }, [])
 
-  useEffect(() => {
-    
-    // Solicitar el historial de mensajes al servidor
+  // Solicitar el historial de mensajes al servidor
+  useEffect(() => {    
     fetch('http://localhost:5000/api/all-chats')
     .then(response => {
         if (!response.ok) {
@@ -69,6 +95,7 @@ const App = () => {
     .catch(error => console.error('Error fetching message history:', error))  
        
   }, [])
+
 
   const handleChatClick = (remoteJid) => {
     setSelectedChat(remoteJid)
@@ -131,7 +158,10 @@ const App = () => {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Sidebar />
+      <Sidebar 
+        selectedChat={selectedChat}
+        products={products}
+        />
       <div className="flex flex-col flex-1">
         <Header />
         <div className="flex flex-1 overflow-y-auto">

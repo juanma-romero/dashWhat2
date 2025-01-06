@@ -1,10 +1,10 @@
 import { format } from 'date-fns'
 
-const ChatList = ({ chats, handleChatClick, selectedChat }) => { 
+const ChatList = ({ chats, handleChatClick, selectedChat }) => {  
     
   return (
     <div 
-      className="p-4 w-80 overflow-y-auto bg-slate-600">
+      className="p-4 w-1/4 overflow-y-auto bg-slate-600">
         <h2 className="text-xl font-semibold mb-4 text-slate-200">Chats</h2>
         <ul className="space-y-2">
           {chats.map(chat => (
@@ -18,7 +18,9 @@ const ChatList = ({ chats, handleChatClick, selectedChat }) => {
             >
               
               <div className="flex justify-between items-center">
-                <p className="text-slate-200 font-semibold truncate">{chat.remoteJid}</p>
+                <p className="text-slate-200 font-semibold truncate">
+                  {chat.contact ? `${chat.contact.firstName} ${chat.contact.lastName}` : chat.remoteJid}
+                </p>
                 {chat.messageTimestamp && (
                   <span className="text-xs text-gray-400">
                     {format(new Date(chat.messageTimestamp), 'HH:mm')}
