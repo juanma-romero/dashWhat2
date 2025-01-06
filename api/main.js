@@ -1,49 +1,24 @@
 import {makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
 import axios from 'axios'
-import { io } from 'socket.io-client';  // Importar socket.io-client
+import express from 'express'
+
+const app = express() // Initialize the express app
+app.use(express.json())
 
 async function connectToWhatsApp () {
 
-    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')    
-    
+    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')   
+
     const sock = makeWASocket({
         // can provide additional config here
         printQRInTerminal: true,
-        auth: state, 
-        // can use Windows, Ubuntu here too
-        //browser: Browsers.Windows('Desktop'),
-        //syncFullHistory: true     
+        auth: state                  
     })
 
     // maneja las credenciales
-    sock.ev.on('creds.update', saveCreds)
 
-        // Configurar conexión de WebSocket con el backend
-    const socket = io('http://localhost:5500');  // Ajustar la URL según sea necesario
-
-    socket.on('connect', () => {
-        console.log('Connected to WebSocket server');
-        
-        // Escuchar los eventos desde el backend para enviar mensajes a WhatsApp
-        socket.on('send-whatsapp-message', async (msgData) => {
-            try {
-                const { remoteJid, message } = msgData;
-                console.log(`Sending message to WhatsApp user: ${remoteJid}`);
-
-                // Enviar mensaje a WhatsApp
-                await sock.sendMessage(remoteJid, { text: message });
-                console.log(`Message sent to ${remoteJid}: ${message}`);
-
-            } catch (error) {
-                console.error('Error sending message to WhatsApp:', error);
-            }
-        })
-    })
-
-        // Manjeo de la desconexión del Socket.IO
-        socket.on('disconnect', () => {
-            console.log('Disconnected from WebSocket server')
-        })
+    sock.ev.on('creds.update', saveCreds)         
+    
 
     // maneja la coneccion de baileys
     sock.ev.on('connection.update', (update) => {
@@ -58,51 +33,69 @@ async function connectToWhatsApp () {
         } else if(connection === 'open') {
             console.log('opened connection')
         }
-    })
+    })    
+    
+    
+    sock.ev.on('messages.upsert', async m => { 
+        console.log(JSON.stringify(m, undefined, 2))
+        try {
+            const messages = m.messages;
+    
+            for (const message of messages) {
+                if (message && message.key && message.message) { // Check if message and key exist
+                    const { remoteJid } = message.key
+                    let textMessage
+    
+                    if (message.message.conversation) {
+                        textMessage = message.message.conversation;
+                    } else if (message.message.extendedTextMessage && message.message.extendedTextMessage.text) {
+                        textMessage = message.message.extendedTextMessage.text
+                    }
+    
+                    // Proceed only if textMessage is defined (it's a text message)
+                    if (textMessage) {
+                        if (
+                            remoteJid.includes('@broadcast') ||
+                            remoteJid.endsWith('@g.us') ||
+                            message.protocolMessage // Filter out protocol messages
+                        ) {
+                            continue
+                        }
     
 
-    // maneja los mensajes recibidos de baileys/cliente
-    sock.ev.on('messages.upsert', async m => {
-        //console.log(JSON.stringify(m, undefined, 2))
-    
-        try {
-            const message = m.messages[0]
-            
-            // Filtrar mensajes de 'status@broadcast' y mensajes de grupo
-            if (!message || message.key.remoteJid === 'status@broadcast' || message.key.remoteJid.endsWith('@g.us')) {
-                return  // Salir prematuramente si el mensaje es de un status broadcast o un grupo
-            }
-    
-            // Solo procesa si el mensaje es entrante (no de tu bot)
-            if (!message.key.fromMe) { 
-                const sender = message.key.remoteJid
-                const timestamp = message.messageTimestamp
-                let textMessage = ""
-    
-                // Manejo de diferentes tipos de mensaje
-                if (message.message && message.message.conversation) {
-                    textMessage = message.message.conversation;
-                } else if (message.message && message.message.extendedTextMessage && message.message.extendedTextMessage.text) {
-                    textMessage = message.message.extendedTextMessage.text;
+                        const messageData = {
+                            key: message.key,
+                            message: textMessage,
+                            messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
+                            pushName: message.pushName,
+                        }    
+                        await axios.post('http://localhost:5000/api/messages', { message: messageData })                      
+                    }
                 }
-    
-                console.log('Remitente:', sender)
-                console.log('Mensaje:', textMessage)
-                console.log('Timestamp:', new Date(timestamp * 1000))
-    
-                // Reenviar datos esenciales al backend
-                await axios.post('http://localhost:5500/api/messages', {
-                    sender,
-                    text: textMessage,
-                    timestamp: new Date(timestamp * 1000).toISOString()
-                })
-                // Emitimos estos datos hacia el frontend a través del backend
-                socket.emit('new-message', { sender, text: textMessage, timestamp })
+
             }
         } catch (error) {
-            console.error('Error processing message:', error)
+            console.error('Error processing message:', error);
+        }
+    })   
+
+    app.post('/send-message', async (req, res) => {
+        try {
+          const { remoteJid, message } = req.body; // Extract ONLY remoteJid and message text
+    
+          // Use Baileys to send the message.  The timestamp will be handled by Baileys.
+          await sock.sendMessage(remoteJid, { text: message }); 
+    
+          res.status(200).send('Message sent successfully');
+        } catch (error) {
+          console.error('Error sending message:', error);
+          res.status(500).send('Error sending message');
         }
     })
 }
-// run in main file
 connectToWhatsApp()
+
+const port = 3000
+app.listen(port, () => {
+    console.log(`Baileys server listening on port ${port}`)
+})
