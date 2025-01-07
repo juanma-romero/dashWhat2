@@ -2,7 +2,7 @@ import React, { useState, useEffect} from 'react'
 
 const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMessage, messagesRespuesta }) => {
     const [messages, setMessages] = useState([])       
-    let allMessages = [...messages];
+    let allMessages = [...messages]
 
     if (messagesRespuesta && messagesRespuesta.length > 0) {
       allMessages = [...messages, ...messagesRespuesta]

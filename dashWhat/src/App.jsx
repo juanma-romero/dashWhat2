@@ -3,7 +3,7 @@ import { io } from 'socket.io-client'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import ChatList from './components/ChatList'
-import ChatArea from './components/ChatArea'
+import ChatArea from './components/ChatArea' 
 
 const App = () => {
   // para listado de chats y seleccion de chats
@@ -18,8 +18,8 @@ const App = () => {
   
   // para manejar listado productos
   const [products, setProducts] = useState([]); // State to store products
-  const [productsLoading, setProductsLoading] = useState(true); // Loading state
-  const [productsError, setProductsError] = useState(null); // Error state
+  const [productsLoading, setProductsLoading] = useState(true) // Loading state
+  const [productsError, setProductsError] = useState(null) // Error state
   
   // carga productos y precio unit al inicio de sesion
   useEffect(() => {

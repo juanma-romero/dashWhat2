@@ -8,8 +8,7 @@ import dotenv from 'dotenv'
 import { MongoClient} from 'mongodb'
 dotenv.config()
 const uri = process.env.MONGODB_URI
-
-
+ 
 const app = express()
 const server = http.createServer(app)
 app.use(express.json())
@@ -251,6 +250,21 @@ app.get('/api/products', async (req, res) => {
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Error fetching products' });
+  }
+})
+
+// Ruta para recibir el nuevo pedido
+app.post('/api/customer/newOrder', async (req, res) => {
+  try {
+    const newOrder = req.body;
+
+    // Insertar el nuevo pedido en la colección
+    const result = await collectionPedidos.insertOne(newOrder);
+
+    res.status(201).json({ message: 'Order created successfully', orderId: result.insertedId });
+  } catch (error) {
+    console.error('Error creating new order:', error);
+    res.status(500).json({ message: 'Error creating new order' });
   }
 })
 
