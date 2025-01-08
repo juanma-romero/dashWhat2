@@ -1,5 +1,3 @@
-
-
 import express from 'express' 
 import http from 'http'
 import { Server } from 'socket.io' 
@@ -57,7 +55,6 @@ async function connectToDatabase() {
 connectToDatabase()
 
 // Ruta para obtener el historial de mensajes
-
 app.get('/api/all-chats', async (req, res) => {
   try {    
     const allChats = await collection.find({}).toArray()
@@ -91,19 +88,29 @@ app.get('/api/all-chats', async (req, res) => {
   const contactosChat = await collectionContacto.find({ Phone: { $in: remoteJids } }).toArray()
   
   // Combine chats and contacts
-  const combinedChats = transformedChats.map(chat => {
+  const combinedChats = await Promise.all(transformedChats.map(async (chat) => {
     const contact = contactosChat.find(c => c.Phone === chat.remoteJid);
+
+    // Fetch the last order status for each chat
+    const lastOrder = await collectionPedidos.find({ Phone: chat.remoteJid })
+      .sort({ fechaSolicitud: -1 })
+      .limit(1)
+      .toArray();
+
+    const lastOrderStatus = lastOrder.length > 0 ? lastOrder[0].status : 'No orders';
+
     return {
       ...chat, // Spread existing chat properties
       contact: contact ? {  // Add contact info conditionally
         firstName: contact['First Name'],
         lastName: contact['Last Name'],
         // ... other contact fields
-      } : null // or null if no contact found
+      } : null, // or null if no contact found
+      lastOrderStatus // Add the last order status
     };
-  });
+  }));
 
-  res.json(combinedChats)
+  res.json(combinedChats);
     
   } catch (err) {
     console.error('Error fetching all chats:', err)
@@ -219,7 +226,7 @@ app.get('/api/customer/:chatId', async (req, res) => {
   }
 })
 
-// responde ultimo pedido guardado
+// responde ultimo pedido guardado 
 app.get('/api/last-order/:chatId', async (req, res) => {
   try {
     const chatId = req.params.chatId;

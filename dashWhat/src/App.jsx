@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react' 
 import { io } from 'socket.io-client'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
@@ -81,19 +81,19 @@ const App = () => {
   }, [])
 
   // Solicitar el historial de mensajes al servidor
-  useEffect(() => {    
-    fetch('http://localhost:5000/api/all-chats')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        return response.json();
-    })
-    
-    .then(dataChatList => {setChats(dataChatList)
-    })    
-    .catch(error => console.error('Error fetching message history:', error))  
-       
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/all-chats');
+        const data = await response.json();
+        console.log('Fetched chats:', data); // Verificar los datos recibidos
+        setChats(data);
+      } catch (error) {
+        console.error('Error fetching chats:', error);
+      }
+    };
+
+    fetchChats();
   }, [])
 
 
