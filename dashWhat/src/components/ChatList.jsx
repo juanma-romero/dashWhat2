@@ -11,7 +11,7 @@ const ChatList = ({ chats, handleChatClick, selectedChat }) => {
         <ul className="space-y-2">
           {chats.map(chat => (
             <li 
-              key={chat.remoteJid}
+              key={chat.remoteJid} 
               onClick={() => handleChatClick(chat.remoteJid)}
               className={`p-2 rounded-md cursor-pointer mb-2 hover:bg-slate-500 ${
                 chat.remoteJid === selectedChat ? 'bg-gray-700' : 'bg-gray-900' 

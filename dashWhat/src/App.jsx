@@ -41,8 +41,8 @@ const App = () => {
         setProductsError(error.message);
         setProductsLoading(false);
         console.error("Error fetching products:", error);
-      });
-  }, []); // Empty dependency array ensures this runs only once on mount
+      })
+  }, [])
 
   // conecta socket.io y recibe mensajes desde baileys
   useEffect(() => {
