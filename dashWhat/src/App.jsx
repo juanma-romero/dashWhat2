@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react' 
 import { io } from 'socket.io-client'
 import Header from './components/Header'
-import Sidebar from './components/Sidebar'
+//import Sidebar from './components/Sidebar/Sidebar'
+import Sidebar from './components/Sidebar/Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea' 
 
@@ -85,8 +86,8 @@ const App = () => {
     const fetchChats = async () => {
       try {
         const response = await fetch('http://localhost:5000/api/all-chats');
-        const data = await response.json();
-        console.log('Fetched chats:', data); // Verificar los datos recibidos
+        const data = await response.json()
+        //console.log('Fetched chats:', data)
         setChats(data);
       } catch (error) {
         console.error('Error fetching chats:', error);

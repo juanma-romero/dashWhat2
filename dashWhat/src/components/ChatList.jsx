@@ -1,5 +1,5 @@
 import { format } from 'date-fns' 
-import { ORDER_STATUS_COLORS } from '../utils/orderStatus.js'
+import { ORDER_STATUS } from '../utils/orderStatus.js'
 
 const ChatList = ({ chats, handleChatClick, selectedChat }) => {  
   
@@ -34,7 +34,7 @@ const ChatList = ({ chats, handleChatClick, selectedChat }) => {
               <p className="text-sm text-gray-300 truncate">{chat.message}</p>
               {/* Badge for last order status */}
               <span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ml-2 ${
-                ORDER_STATUS_COLORS[chat.lastOrderStatus] || 'bg-gray-500 text-white'
+                ORDER_STATUS[chat.lastOrderStatus] || 'bg-gray-500 text-white'
               }`}>
                 {chat.lastOrderStatus}
               </span>
