@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react' 
 import { io } from 'socket.io-client'
 import Header from './components/Header'
-import Sidebar from './components/Sidebar'
+//import Sidebar from './components/Sidebar/Sidebar'
+import Sidebar from './components/Sidebar/Sidebar'
 import ChatList from './components/ChatList'
-import ChatArea from './components/ChatArea'
+import ChatArea from './components/ChatArea' 
 
 const App = () => {
   // para listado de chats y seleccion de chats
@@ -18,8 +19,8 @@ const App = () => {
   
   // para manejar listado productos
   const [products, setProducts] = useState([]); // State to store products
-  const [productsLoading, setProductsLoading] = useState(true); // Loading state
-  const [productsError, setProductsError] = useState(null); // Error state
+  const [productsLoading, setProductsLoading] = useState(true) // Loading state
+  const [productsError, setProductsError] = useState(null) // Error state
   
   // carga productos y precio unit al inicio de sesion
   useEffect(() => {
@@ -40,8 +41,8 @@ const App = () => {
         setProductsError(error.message);
         setProductsLoading(false);
         console.error("Error fetching products:", error);
-      });
-  }, []); // Empty dependency array ensures this runs only once on mount
+      })
+  }, [])
 
   // conecta socket.io y recibe mensajes desde baileys
   useEffect(() => {
@@ -81,19 +82,19 @@ const App = () => {
   }, [])
 
   // Solicitar el historial de mensajes al servidor
-  useEffect(() => {    
-    fetch('http://localhost:5000/api/all-chats')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        return response.json();
-    })
-    
-    .then(dataChatList => {setChats(dataChatList)
-    })    
-    .catch(error => console.error('Error fetching message history:', error))  
-       
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/all-chats');
+        const data = await response.json()
+        //console.log('Fetched chats:', data)
+        setChats(data);
+      } catch (error) {
+        console.error('Error fetching chats:', error);
+      }
+    };
+
+    fetchChats();
   }, [])
 
 

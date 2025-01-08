@@ -1,8 +1,11 @@
-import React, { useState, useEffect} from 'react'
+import React, { useState, useEffect, useRef} from 'react'
 
 const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMessage, messagesRespuesta }) => {
     const [messages, setMessages] = useState([])       
-    let allMessages = [...messages];
+    let allMessages = [...messages]
+
+    // Scroll to the bottom of the chat area when new messages are added
+    const messagesEndRef = useRef(null)
 
     if (messagesRespuesta && messagesRespuesta.length > 0) {
       allMessages = [...messages, ...messagesRespuesta]
@@ -29,6 +32,14 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
         }
     }, [selectedChat])   
     
+    // Scroll to the bottom of the chat area when new messages are added
+    useEffect(() => {
+        // Scroll to the bottom of the messages when they change
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, [allMessages])
+
     return (
         <div             
             className="flex-1 p-4 bg-gray-700 flex flex-col justify-end h-full overflow-y-auto">
@@ -54,8 +65,9 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
                             </div>
                         </div>
                     ))}
+                    <div ref={messagesEndRef} />
                 </div>
-
+                    
                 <div className="pt-4"> 
                     <input
                         type="text"
