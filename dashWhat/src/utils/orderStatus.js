@@ -3,13 +3,12 @@ export const ORDER_STATUS = {
   'Confirmado': 'bg-green-500 text-white',
   'En proceso': 'bg-yellow-500 text-black',
   'Entregado': 'bg-blue-500 text-white',
-  'Cancelado': 'bg-gray-800 text-white',
-  // Añade más estados y colores según sea necesario
+  'Cancelado': 'bg-gray-800 text-white'  
 }
 export const CONVERSATION_STATUS = {
   'No leido': 'bg-red-500 text-white',
-  'Leido': 'bg-green-500 text-white',
-  // Añade más estados y colores según sea necesario
+  'Atendiendo': 'bg-green-500 text-white',
+  'Resuelto': 'bg-blue-500 text-white' 
 }
 
 

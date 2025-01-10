@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react' 
 import { io } from 'socket.io-client'
-import Header from './components/Header'
-//import Sidebar from './components/Sidebar/Sidebar'
+
+//import Header from './components/Header'
 import Sidebar from './components/Sidebar/Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea' 
@@ -156,6 +156,16 @@ const App = () => {
     }
   }
   
+  const handleStateConversationChange = (remoteJid, newState) => {
+    console.log('Updating state conversation for:', remoteJid, newState)
+    setChats(prevChats =>
+      prevChats.map(chat =>
+        chat.remoteJid === remoteJid ? { ...chat, stateConversation: newState } : chat
+      )
+    )
+  }
+
+  const selectedChatObject = chats.find(chat => chat.remoteJid === selectedChat)
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -164,7 +174,7 @@ const App = () => {
         products={products}
         />
       <div className="flex flex-col flex-1">
-        <Header />
+        {/*<Header />*/}
         <div className="flex flex-1 overflow-y-auto">
           <ChatList 
             chats={chats} 
@@ -172,13 +182,18 @@ const App = () => {
             selectedChat={selectedChat}
             
             />
+            
+          {selectedChat && (
           <ChatArea
+            stateConversation={selectedChatObject.stateConversation || 'No leido'}
             messagesRespuesta={messagesRespuesta}
             selectedChat={selectedChat}
             messageText={messageText}
             handleMessageChange={handleMessageChange}
-            handleSendMessage={handleSendMessage}           
+            handleSendMessage={handleSendMessage}
+            onStateConversationChange={handleStateConversationChange}           
           />
+          )}
         </div>
       </div>
     </div>

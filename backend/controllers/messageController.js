@@ -55,7 +55,7 @@ export const storeMessage = async (req, res) => {
     );
     const transformedMessage = { ...messageData, _id: result.upsertedId ? result.upsertedId._id : null };
 
-    console.log(transformedMessage);
+    //console.log(transformedMessage);
     io.emit('new-message', transformedMessage);
     res.sendStatus(200);
   } catch (err) {

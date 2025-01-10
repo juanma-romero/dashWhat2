@@ -29,9 +29,9 @@ connectToDatabase();
 // Función para obtener todos los chats
 export const getAllChats = async (req, res) => {
   try {
-    const allChats = await collection.find({}).toArray();
+    const allChats = await collection.find({}).toArray()
     const transformedChats = allChats.map(chat => {
-      const messages = Object.values(chat).filter(val => typeof val === 'object' && val !== null && 'messageTimestamp' in val);
+      const messages = Object.values(chat).filter(val => typeof val === 'object' && val !== null && 'messageTimestamp' in val)
 
       if (messages.length === 0) {
         return { remoteJid: chat.remoteJid, message: null, messageTimestamp: null };
@@ -39,37 +39,30 @@ export const getAllChats = async (req, res) => {
 
       const latestMessage = messages.reduce((latest, current) => {
         return new Date(latest.messageTimestamp) > new Date(current.messageTimestamp) ? latest : current;
-      });
+      })
 
       return {
         remoteJid: chat.remoteJid,
         message: latestMessage.message,
         messageTimestamp: latestMessage.messageTimestamp,
-      };
-    });
+        stateConversation: chat.stateConversation 
+      }
+    })
 
     // Ordenar los chats transformados por la última marca de tiempo del mensaje
     transformedChats.sort((chatA, chatB) => {
-      const timestampA = chatA.messageTimestamp ? new Date(chatA.messageTimestamp) : 0;
-      const timestampB = chatB.messageTimestamp ? new Date(chatB.messageTimestamp) : 0;
-      return timestampB - timestampA;
-    });
+      const timestampA = chatA.messageTimestamp ? new Date(chatA.messageTimestamp) : 0
+      const timestampB = chatB.messageTimestamp ? new Date(chatB.messageTimestamp) : 0
+      return timestampB - timestampA
+    })
 
     // Obtener contactos relacionados con los chats
-    const remoteJids = transformedChats.map(chat => chat.remoteJid);
-    const contactosChat = await collectionContacto.find({ Phone: { $in: remoteJids } }).toArray();
+    const remoteJids = transformedChats.map(chat => chat.remoteJid)
+    const contactosChat = await collectionContacto.find({ Phone: { $in: remoteJids } }).toArray()
 
     // Combinar chats y contactos
     const combinedChats = await Promise.all(transformedChats.map(async (chat) => {
-      const contact = contactosChat.find(c => c.Phone === chat.remoteJid);
-
-      // Obtener el estado del último pedido para cada chat
-      const lastOrder = await collectionPedidos.find({ Phone: chat.remoteJid })
-        .sort({ fechaSolicitud: -1 })
-        .limit(1)
-        .toArray();
-
-      const lastOrderStatus = lastOrder.length > 0 ? lastOrder[0].status : 'No orders';
+      const contact = contactosChat.find(c => c.Phone === chat.remoteJid)
 
       return {
         ...chat, // Spread existing chat properties
@@ -78,17 +71,15 @@ export const getAllChats = async (req, res) => {
           lastName: contact['Last Name'],
           // ... other contact fields
         } : null, // or null if no contact found
-        lastOrderStatus // Add the last order status
-      };
-    }));
-
+      }
+    }))
     res.json(combinedChats);
 
   } catch (err) {
     console.error('Error fetching all chats:', err);
     res.status(500).send('Error fetching all chats');
   }
-};
+}
 
 // Función para obtener los mensajes de un chat específico
 export const getChatMessages = async (req, res) => {
@@ -112,4 +103,32 @@ export const getChatMessages = async (req, res) => {
     console.error('Error fetching messages for chat:', err);
     res.status(500).send('Error fetching messages for chat');
   }
-};
+}
+
+//Función para actualizar el estado de la conversación
+export const updateStateConversation = async (req, res) => {
+  console.log(req.body);
+  try {
+    const { remoteJid, stateConversation } = req.body;
+
+    // Validar que los parámetros necesarios están presentes
+    if (!remoteJid || !stateConversation) {
+      return res.status(400).send('remoteJid y stateConversation son requeridos');
+    }
+
+    // Actualizar el estado de la conversación en la base de datos
+    const result = await collection.updateOne(
+      { remoteJid: remoteJid },
+      { $set: { stateConversation: stateConversation } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).send('No se encontró el chat con el remoteJid especificado');
+    }
+
+    res.status(200).send('Estado de la conversación actualizado correctamente');
+  } catch (err) {
+    console.error('Error actualizando el estado de la conversación:', err);
+    res.status(500).send('Error actualizando el estado de la conversación');
+  }
+}

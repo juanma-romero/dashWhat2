@@ -2,6 +2,8 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io' 
 import cors from 'cors'
+
+// rutas
 import chatRoutes from './routes/chatRoutes.js'
 import customerRoutes from './routes/customerRoutes.js'
 import messageRoutes from './routes/messageRoutes.js'
@@ -24,7 +26,7 @@ const io = new Server(server, {
 // Middleware para manejar CORS en Express 
 app.use(cors({
   origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT'],
   allowedHeaders: ['Content-Type']
 }))
 

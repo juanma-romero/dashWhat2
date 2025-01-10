@@ -1,9 +1,8 @@
 import { format } from 'date-fns' 
-import { ORDER_STATUS } from '../utils/orderStatus.js'
+import { CONVERSATION_STATUS } from '../utils/orderStatus.js'
 
 const ChatList = ({ chats, handleChatClick, selectedChat }) => {  
-  
-
+  console.log('Rendering ChatList with chats:', chats)
   return (
     <div 
       className="p-4 w-1/4 overflow-y-auto bg-slate-600">
@@ -32,11 +31,11 @@ const ChatList = ({ chats, handleChatClick, selectedChat }) => {
               {chat.message && (
               <div className="flex justify-between items-center mt-1">
               <p className="text-sm text-gray-300 truncate">{chat.message}</p>
-              {/* Badge for last order status */}
+              {/* Badge for conversation status */}
               <span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ml-2 ${
-                ORDER_STATUS[chat.lastOrderStatus] || 'bg-gray-500 text-white'
-              }`}>
-                {chat.lastOrderStatus}
+                  CONVERSATION_STATUS[chat.stateConversation] || 'bg-gray-500 text-white'
+                }`}>
+                  {chat.stateConversation}
               </span>
               </div>
             )}
