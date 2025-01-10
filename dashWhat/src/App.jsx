@@ -48,6 +48,7 @@ const App = () => {
   useEffect(() => {
     socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
     socketRef.current.on('new-message', (messageData) => {  
+      //console.log('Received new message:', messageData)
       setChats((prevChats) => {
         const incomingJid = messageData.key.remoteJid
         const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);
@@ -157,7 +158,7 @@ const App = () => {
   }
   
   const handleStateConversationChange = (remoteJid, newState) => {
-    console.log('Updating state conversation for:', remoteJid, newState)
+    //console.log('Updating state conversation for:', remoteJid, newState)
     setChats(prevChats =>
       prevChats.map(chat =>
         chat.remoteJid === remoteJid ? { ...chat, stateConversation: newState } : chat

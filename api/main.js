@@ -2,7 +2,7 @@ import {makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeyso
 import axios from 'axios'
 import express from 'express'
 
-const app = express() // Initialize the express app
+const app = express()
 app.use(express.json())
 
 async function connectToWhatsApp () {

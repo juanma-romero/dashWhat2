@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import { CONVERSATION_STATUS } from '../utils/orderStatus.js'
 
 const ChatList = ({ chats, handleChatClick, selectedChat }) => {  
-  console.log('Rendering ChatList with chats:', chats)
+  //console.log('Rendering ChatList with chats:', chats)
   return (
     <div 
       className="p-4 w-1/4 overflow-y-auto bg-slate-600">

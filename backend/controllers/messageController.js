@@ -1,3 +1,4 @@
+/*
 import dotenv from 'dotenv'
 import { MongoClient } from 'mongodb';
 import { Server } from 'socket.io';
@@ -34,7 +35,8 @@ const io = new Server(server, {
     allowedHeaders: ['Content-Type'],
     credentials: true 
   }
-})
+}) 
+
 
 
 // Función para almacenar mensajes
@@ -55,7 +57,7 @@ export const storeMessage = async (req, res) => {
     );
     const transformedMessage = { ...messageData, _id: result.upsertedId ? result.upsertedId._id : null };
 
-    //console.log(transformedMessage);
+    console.log(transformedMessage);
     io.emit('new-message', transformedMessage);
     res.sendStatus(200);
   } catch (err) {
@@ -63,3 +65,8 @@ export const storeMessage = async (req, res) => {
     res.status(500).send('Error storing message');
   }
 }
+
+server.listen(5000, () => {
+  console.log('Server is listening on port 5000:2')
+})
+  */

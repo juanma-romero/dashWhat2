@@ -27,7 +27,7 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
     
           if (response.ok) {
             setStateConversation(newState)
-            console.log('Calling onStateConversationChange with:', stateConversation)
+            //console.log('Calling onStateConversationChange with:', stateConversation)
             onStateConversationChange( selectedChat, newState)
           } else {
             console.error('Error updating state conversation');
