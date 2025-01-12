@@ -158,15 +158,16 @@ const Sidebar = ({ selectedChat, products }) => {
  
   
   return (
-    <div className="w-1/3 bg-gray-800 p-4">
-      
+    <div className="w-1/3 bg-gray-800 p-4 flex flex-col overflow-y-auto">      
       {/* perfil cliente */}
       <CustomerProfile
+        className=""
         customer={customer}
       />    
  
       {/* Collapsible Last Order Section */}
       <LastOrderSection 
+        className=""
         lastOrder={lastOrder}
         lastOrderLoading={lastOrderLoading}
         lastOrderError={lastOrderError}
@@ -176,6 +177,7 @@ const Sidebar = ({ selectedChat, products }) => {
 
       {/* Formulario pedido */}
       <NewOrderForm
+        className=""
         selectedChat={selectedChat}
         deliveryDate={deliveryDate}
         setDeliveryDate={setDeliveryDate}

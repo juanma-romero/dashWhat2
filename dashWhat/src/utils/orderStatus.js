@@ -7,7 +7,7 @@ export const ORDER_STATUS = {
 }
 export const CONVERSATION_STATUS = {
   'No leido': 'bg-red-500 text-white',
-  'Atendiendo': 'bg-green-500 text-white',
+  'Atendiendo': 'bg-yellow-500',
   'Resuelto': 'bg-blue-500 text-white' 
 }
 

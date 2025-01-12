@@ -85,9 +85,9 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
                         {Object.keys(CONVERSATION_STATUS).map((status) => (
                             <button
                             key={status}
-                            className={`px-4 py-2 rounded-full ${
+                            className={`px-4 py-2 rounded-full  ${
                               stateConversation === status ? CONVERSATION_STATUS[status] : 'bg-gray-300'
-                            } ${stateConversation === status ? 'ring-2 ring-offset-2 ring-indigo-500' : ''}`}
+                            } ${stateConversation === status ? 'ring-2 text-black ring-offset-2 ring-indigo-500' : ''}`}
                             onClick={() => handleStateChange(status)}
                           >
                             {status}

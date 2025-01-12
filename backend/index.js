@@ -40,7 +40,7 @@ let collection;
 async function connectToDatabase() {
   try {
     await client.connect();
-    console.log('Connected to MongoDB messageController.js');
+    console.log('Connected to MongoDB index.js');
     const db = client.db('dash');
     collection = db.collection('chats');
   } catch (err) {
@@ -85,7 +85,7 @@ app.post('/api/messages', async (req, res) => {
     );
     const transformedMessage = { ...messageData, _id: result.upsertedId ? result.upsertedId._id : null };
 
-    console.log(transformedMessage);
+    //console.log(transformedMessage);
     io.emit('new-message', transformedMessage);
     res.sendStatus(200);
   } catch (err) {

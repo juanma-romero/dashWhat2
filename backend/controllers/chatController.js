@@ -107,7 +107,7 @@ export const getChatMessages = async (req, res) => {
 
 //Función para actualizar el estado de la conversación
 export const updateStateConversation = async (req, res) => {
-  console.log(req.body);
+  //console.log(req.body);
   try {
     const { remoteJid, stateConversation } = req.body;
 

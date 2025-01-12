@@ -3,8 +3,10 @@ import { ORDER_STATUS } from '../../utils/orderStatus';
 
 const NewOrderForm = ({ selectedChat, deliveryDate, setDeliveryDate, orderItems, addOrderItem, handleProductChange, handleQuantityChange, handleSubmit, observations, setObservations, orderStatus, handleStatusChange, products }) => {
   return (
-<form onSubmit={handleSubmit}>
-    <h3 className="text-lg text-white font-bold mb-2">Nuevo Pedido</h3>
+<form onSubmit={handleSubmit}
+  className='border border-gray-600 rounded p-4 mt-2'
+>
+    <h3 className="text-lg text-white font-bold mb-2 underline">Nuevo Pedido</h3>
     {/* Fecha y Hora */}
     <div className="mb-4">
         <label className="block text-white mb-1" htmlFor="orderDate">Fecha y Hora</label>
