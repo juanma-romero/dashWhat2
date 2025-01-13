@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -47,4 +47,30 @@ export const getAllProducts = async (req, res) => {
     console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Error fetching products' });
   }
+}
+
+// Función para actualizar un pedido
+export const updateOrder = async (req, res) => {
+  try {
+    const updatedOrder = req.body;
+    
+    const orderId = ObjectId.createFromHexString(updatedOrder.idOrder)    
+    
+    
+    // Actualizar el pedido en la colección
+    const modificado = await collectionPedidos.updateOne(
+      { _id: orderId },
+      { $set: {
+        fechaEntrega: updatedOrder.fechaEntrega,
+        items: updatedOrder.items,
+        status: updatedOrder.status
+      } }
+    )
+    console.log('modificado:', modificado);
+    res.json({ message: 'Order updated successfully' })
+  }
+  catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({ message: 'Error updating order' })  
+    }    
 }

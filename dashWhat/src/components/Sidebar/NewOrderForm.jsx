@@ -20,7 +20,7 @@ const NewOrderForm = ({ selectedChat, deliveryDate, setDeliveryDate, orderItems,
                 onChange={(e) => setDeliveryDate(e.target.value)}
                 className="w-full p-2 border border-gray-600 rounded"
             />
-    </div>
+    </div> 
     {/* Selecciona Productos y cantidades */}
     {orderItems.map((item, index) => (
               <div key={item.id} className="flex mb-2">

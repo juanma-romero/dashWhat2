@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react'  
 import { v4 as uuidv4 } from 'uuid'
-//import { ORDER_STATUS } from '../utils/orderStatus';
 import CustomerProfile from './CustomerProfile';
 import LastOrderSection from './LastOrderSection';
 import NewOrderForm from './NewOrderForm';
@@ -12,9 +11,6 @@ const Sidebar = ({ selectedChat, products }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)  
   
-  // state de colapsable
-  const [isOrderCollapsed, setIsOrderCollapsed] = useState(true)
-
   // states de ultimo pedido
   const [lastOrder, setLastOrder] = useState(null);
   const [lastOrderLoading, setLastOrderLoading] = useState(false);
@@ -26,10 +22,7 @@ const Sidebar = ({ selectedChat, products }) => {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [orderStatus, setOrderStatus] = useState('No leido');
 
-  const toggleOrderCollapse = () => {
-    setIsOrderCollapsed(!isOrderCollapsed);
-  }
-
+ 
   const addOrderItem = () => {
     setOrderItems([...orderItems, { id: uuidv4(), product: '', quantity: 1, price: 0 }])
   }
@@ -167,12 +160,12 @@ const Sidebar = ({ selectedChat, products }) => {
  
       {/* Collapsible Last Order Section */}
       <LastOrderSection 
+        products={products}
         className=""
         lastOrder={lastOrder}
         lastOrderLoading={lastOrderLoading}
-        lastOrderError={lastOrderError}
-        isOrderCollapsed={isOrderCollapsed}
-        toggleOrderCollapse={toggleOrderCollapse}
+        lastOrderError={lastOrderError}        
+        
       />
 
       {/* Formulario pedido */}

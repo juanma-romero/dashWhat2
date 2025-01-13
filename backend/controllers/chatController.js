@@ -67,8 +67,8 @@ export const getAllChats = async (req, res) => {
       return {
         ...chat, // Spread existing chat properties
         contact: contact ? {  // Add contact info conditionally
-          firstName: contact['First Name'],
-          lastName: contact['Last Name'],
+          firstName: contact.firstName,
+          lastName: contact.lastName,
           // ... other contact fields
         } : null, // or null if no contact found
       }

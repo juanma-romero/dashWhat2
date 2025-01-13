@@ -60,14 +60,14 @@ async function connectToWhatsApp () {
                             message.protocolMessage // Filter out protocol messages
                         ) {
                             continue
-                        }
-    
+                        }    
 
                         const messageData = {
                             key: message.key,
                             message: textMessage,
                             messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
                             pushName: message.pushName,
+                            whatName:(message.pushName && message.key.fromMe === false) ? message.pushName : '',
                         }    
                         await axios.post('http://localhost:5000/api/messages', { message: messageData })                      
                     }

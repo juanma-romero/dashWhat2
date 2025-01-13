@@ -32,6 +32,27 @@ const CustomerProfile = ({ customer }) => {
     setIsEditable(!isEditable);
   };
 
+  const saveChanges = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/customer-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+      if (response.ok) {
+        // Handle successful response
+        console.log('Profile updated successfully');
+      } else {
+        // Handle error response
+        console.error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
   return (
     <div className="border border-gray-600 rounded p-4">
       <h3 className="text-lg text-white font-bold mb-2 underline">Datos Cliente</h3>
@@ -95,7 +116,7 @@ const CustomerProfile = ({ customer }) => {
         <div className="mt-4">
           <button
             type="button"
-            onClick={toggleEdit}
+            onClick={isEditable ? saveChanges : toggleEdit}
             className="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
           >
             {isEditable ? 'Guardar Cambios' : 'Modificar Cliente'}
