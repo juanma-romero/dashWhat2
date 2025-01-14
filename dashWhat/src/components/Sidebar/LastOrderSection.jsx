@@ -16,17 +16,17 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
   useEffect(() => {
     if (lastOrder) {
       setFormData({
-        idOrder: lastOrder._id ,
-        fechaSolicitud: new Date(lastOrder.fechaSolicitud).toLocaleString() || '',
-        fechaEntrega: new Date(lastOrder.fechaEntrega).toLocaleString() || '',
-        items: lastOrder.items.map(item => ({
+        idOrder: lastOrder._id || '',
+        fechaSolicitud: lastOrder.fechaSolicitud ? new Date(lastOrder.fechaSolicitud).toLocaleString() : '',
+        fechaEntrega: lastOrder.fechaEntrega ? new Date(lastOrder.fechaEntrega).toLocaleString() : '',
+        items: lastOrder.items ? lastOrder.items.map(item => ({
           _id: item._id,
           cantidad: item.cantidad
-        })),
+        })) : [],
         status: lastOrder.status || ''
-      })
+      });
     }
-  }, [lastOrder]) 
+  }, [lastOrder])
 
   const handleStatusChange = (e) => {
     setFormData({

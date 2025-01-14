@@ -3,22 +3,29 @@ import React, { useState, useEffect } from 'react';
 const CustomerProfile = ({ customer }) => {
   const [formData, setFormData] = useState({
     name: '',
-    nameWhatsapp: '',
+    whatName: '',
     phone: '',
     RUC: ''
-  });
+  })
   const [isEditable, setIsEditable] = useState(false);
 
   useEffect(() => {
     if (customer) {
       setFormData({
         name: customer.name || '',
-        nameWhatsapp: customer.nameWhatsapp || '',
+        whatName: customer.whatName || '',
         phone: customer.phone || '',
         RUC: customer.RUC || ''
       });
+    } else {
+      setFormData({
+        name: '',
+        whatName: '',
+        phone: '',
+        RUC: ''
+      });
     }
-  }, [customer]);
+  }, [customer])
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,7 +47,7 @@ const CustomerProfile = ({ customer }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
-      });
+      })
       if (response.ok) {
         // Handle successful response
         console.log('Profile updated successfully');
