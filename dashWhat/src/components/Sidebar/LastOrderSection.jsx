@@ -28,6 +28,10 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
     }
   }, [lastOrder])
 
+  useEffect(() => {
+    setModOk('');
+  }, [formData]);
+
   const handleStatusChange = (e) => {
     setFormData({
       ...formData,
@@ -108,7 +112,7 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
                     name="fechaEntrega"
                     value={formData.fechaEntrega}
                     onChange={handleChange}
-                    className="font-bold text-white p-2 ml-2 rounded w-30"
+                    className="font-bold  p-2 ml-2 rounded w-30"
                     disabled={!isEditable}
                   />
                 </td>

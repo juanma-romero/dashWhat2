@@ -36,7 +36,6 @@ const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 
 let collection;
-let contactosGoogle;
 
 async function connectToDatabase() {
   try {
@@ -44,7 +43,6 @@ async function connectToDatabase() {
     console.log('Connected to MongoDB index.js');
     const db = client.db('dash');
     collection = db.collection('chats');
-    contactosGoogle = db.collection('contactosGoogle');
   } catch (err) {
     console.error('Error connecting to MongoDB:', err);
   }
@@ -85,18 +83,7 @@ app.post('/api/messages', async (req, res) => {
       },
       { upsert: true }
     )
-
-    // Actualizar la colección de contactosGoogle
-    await contactosGoogle.updateOne(
-      { remoteJid: remoteJid },
-      {
-        $set: { whatName: whatName }
-      },
-      { upsert: true }
-    )
-
     const transformedMessage = { ...messageData, _id: result.upsertedId ? result.upsertedId._id : null };
-
     //console.log(transformedMessage);
     io.emit('new-message', transformedMessage);
     res.sendStatus(200);
