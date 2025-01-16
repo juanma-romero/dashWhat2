@@ -36,10 +36,12 @@ import dotenv from 'dotenv'
  
      // Transform customer data. Select the fields you need
      const transformedCustomer = {
-       name: `${customer['First Name']} ${customer['Last Name']}`,
+       name: `${customer['firstName']} ${customer['lastName']}`,
        phone: customer.Phone,
+       RUC: customer.RUC,
+       whatName: customer.whatName,
        // ... other fields you want to send to the frontend
-     };
+     }
  
      res.json(transformedCustomer);
    } catch (error) {
@@ -63,10 +65,46 @@ import dotenv from 'dotenv'
      if (!lastOrder || lastOrder.length === 0) {  // Check for empty array
        return res.status(404).json({ message: 'No previous orders found for this customer' });
      }
-     console.log(lastOrder[0]);
+     //console.log(lastOrder[0]);
      res.json(lastOrder[0]);
    } catch (error) {
      console.error('Error fetching last order:', error);
      res.status(500).json({ message: 'Error fetching last order' });
    }
  };
+
+ // Función para actualizar datos del cliente
+  export const updateCustomerProfile = async (req, res) => {
+    try {
+      const { name, phone, RUC } = req.body;
+  
+      // Separar el nombre completo en First Name y Last Name
+      const [firstName, ...lastNameParts] = name.split(' ');
+      const lastName = lastNameParts.join(' ');
+  
+      // Actualizar el perfil del cliente en la base de datos
+      const updatedCustomer = await collectionContacto.updateOne(
+        {Phone: phone},
+        {    
+          $set: {      
+            firstName,
+            lastName,
+            Phone: phone,
+            RUC  
+          }        
+        },
+        { upsert: true } // Insert a new document if no match is found
+      )
+  
+      if (!updatedCustomer) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+  
+      res.status(200).json(updatedCustomer);
+    } catch (error) {
+      console.error('Error updating customer profile:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  

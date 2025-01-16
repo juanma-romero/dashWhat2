@@ -2,7 +2,7 @@ import {makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeyso
 import axios from 'axios'
 import express from 'express'
 
-const app = express() // Initialize the express app
+const app = express()
 app.use(express.json())
 
 async function connectToWhatsApp () {
@@ -60,14 +60,13 @@ async function connectToWhatsApp () {
                             message.protocolMessage // Filter out protocol messages
                         ) {
                             continue
-                        }
-    
+                        }    
 
                         const messageData = {
                             key: message.key,
                             message: textMessage,
                             messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
-                            pushName: message.pushName,
+                            pushName: message.pushName
                         }    
                         await axios.post('http://localhost:5000/api/messages', { message: messageData })                      
                     }

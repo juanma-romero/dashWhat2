@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react' 
 import { io } from 'socket.io-client'
 import Header from './components/Header'
-//import Sidebar from './components/Sidebar/Sidebar'
+
+//import Header from './components/Header'
 import Sidebar from './components/Sidebar/Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea' 
@@ -48,6 +49,7 @@ const App = () => {
   useEffect(() => {
     socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
     socketRef.current.on('new-message', (messageData) => {  
+      //console.log('Received new message:', messageData)
       setChats((prevChats) => {
         const incomingJid = messageData.key.remoteJid
         const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);
@@ -156,32 +158,45 @@ const App = () => {
     }
   }
   
+  const handleStateConversationChange = (remoteJid, newState) => {
+    //console.log('Updating state conversation for:', remoteJid, newState)
+    setChats(prevChats =>
+      prevChats.map(chat =>
+        chat.remoteJid === remoteJid ? { ...chat, stateConversation: newState } : chat
+      )
+    )
+  }
+
+  const selectedChatObject = chats.find(chat => chat.remoteJid === selectedChat)
 
   return (
+    <>
+    <Header />
     <div className="flex h-screen bg-gray-900">
       <Sidebar 
         selectedChat={selectedChat}
         products={products}
-        />
-      <div className="flex flex-col flex-1">
-        <Header />
-        <div className="flex flex-1 overflow-y-auto">
-          <ChatList 
+      />         
+      <ChatList 
             chats={chats} 
             handleChatClick={handleChatClick}
-            selectedChat={selectedChat}
-            
-            />
-          <ChatArea
+            selectedChat={selectedChat}            
+      />            
+          {selectedChat && (
+      <ChatArea
+            stateConversation={selectedChatObject.stateConversation || 'No leido'}
             messagesRespuesta={messagesRespuesta}
             selectedChat={selectedChat}
             messageText={messageText}
             handleMessageChange={handleMessageChange}
-            handleSendMessage={handleSendMessage}           
-          />
-        </div>
-      </div>
+            handleSendMessage={handleSendMessage}
+            onStateConversationChange={handleStateConversationChange}           
+      />
+        )}
+        
+      
     </div>
+    </>
   )
 }
 

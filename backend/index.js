@@ -2,9 +2,14 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io' 
 import cors from 'cors'
+import dotenv from 'dotenv'
+import { MongoClient } from 'mongodb';
+
+
+// rutas
 import chatRoutes from './routes/chatRoutes.js'
 import customerRoutes from './routes/customerRoutes.js'
-import messageRoutes from './routes/messageRoutes.js'
+//import messageRoutes from './routes/messageRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 
 const app = express()
@@ -20,25 +25,74 @@ const io = new Server(server, {
     credentials: true 
   }
 })
+io.on("connection", (socket) => {
+  console.log('New client connected:')
+})
+
+dotenv.config()
+
+// Conexión a la base de datos
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
+
+let collection;
+
+async function connectToDatabase() {
+  try {
+    await client.connect();
+    console.log('Connected to MongoDB index.js');
+    const db = client.db('dash');
+    collection = db.collection('chats');
+  } catch (err) {
+    console.error('Error connecting to MongoDB:', err);
+  }
+}
+connectToDatabase()
 
 // Middleware para manejar CORS en Express 
 app.use(cors({
   origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT'],
   allowedHeaders: ['Content-Type']
 }))
 
 // Usar las rutas de chats
-app.use('/api', chatRoutes)
+app.use('/api', chatRoutes) 
 
 // Ruta para responder ultimo pedido y perfil del cliente
 app.use('/api', customerRoutes)
 
 // Usar las rutas de mensajes
-app.use('/api', messageRoutes)
+//app.use('/api', messageRoutes)
 
 // Usar las rutas de pedidos
 app.use('/api', orderRoutes)
+
+app.post('/api/messages', async (req, res) => {
+  const messageData = req.body.message;
+
+  try {
+    const remoteJid = messageData.key.remoteJid;
+    const messageID = messageData.key.id;
+
+    const result = await collection.updateOne(
+      { remoteJid: remoteJid },
+      {
+        $set: { [messageID]: messageData },
+        $setOnInsert: { remoteJid: remoteJid }
+      },
+      { upsert: true }
+    )
+    const transformedMessage = { ...messageData, _id: result.upsertedId ? result.upsertedId._id : null };
+    //console.log(transformedMessage);
+    io.emit('new-message', transformedMessage);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error storing message in MongoDB:', err);
+    res.status(500).send('Error storing message');
+  }
+})
+
 
 // Ruta REST recibe mensajes emitidos de Frontend, reenviados a Baileys
 io.on("connection", (socket) => {
