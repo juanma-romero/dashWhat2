@@ -91,67 +91,66 @@ const Sidebar = ({ selectedChat, products }) => {
   // carga datos cliente , luego ultimo pedido de ese cliente
   useEffect(() => {
     if (selectedChat) { // Only fetch if selectedChat is not null
-      setLoading(true); // Set loading to true before fetching
-      setError(null); // Reset any previous error
-      setCustomer(null)
-      setOrderItems([{ id: uuidv4(), product: '', quantity: 1, price: 0 }])
+        setLoading(true); // Set loading to true before fetching
+        setError(null); // Reset any previous error
+        setCustomer({ firstName: '', lastName: '', Phone: '', RUC: '' }); // Initialize with empty object
+        setOrderItems([{ id: uuidv4(), product: '', quantity: 1, price: 0 }]);
+        
         fetch(`http://localhost:5000/api/customer/${selectedChat}`)
             .then(response => {
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`) // Throw error for non-2xx responses
-              }
-              return response.json()
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`); // Throw error for non-2xx responses
+                }
+                return response.json();
             })
             .then(data => {
                 setCustomer(data);
                 setLoading(false); // Set loading to false after successful fetch
             })
-            .catch(err => {                    
-                setError(err.message) // Handle errors
+            .catch(err => {
+                setError(err.message); // Handle errors
                 setLoading(false); // Set loading to false even if an error occurred
-                console.error("Fetch error:", err)
-            })
-            
-      // Fetch last order after customer data is fetched successfully
-      setLastOrderLoading(true);
-      setLastOrderError(null)
-      setLastOrder(null)
-
-      fetch(`http://localhost:5000/api/last-order/${selectedChat}`)
-        .then(response => {
-          if (!response.ok) {
-            if (response.status === 404) {
-              setLastOrder(null); // Set lastOrder to null to trigger the "No orders" message
-          } else {                            
-              throw new Error(`HTTP error! status: ${response.status}`); // Throw error for other status codes
-
-          }
-          }
-          return response.json()
-        })
-        .then(data => {
-        if (data) {
-          setLastOrder(data);
-        }
-        setLastOrderLoading(false)
-      })
-        .catch(err => {
-          setLastOrderError(err.message)
-          setLastOrderLoading(false)
-          console.error("Error fetching last order:", err)
-        })
-    } else {
-        setCustomer(null) // Reset customer data if selectedChat becomes null
-        setLastOrder(null) // Reset last order data as well
-        setLastOrderLoading(false)
-        setLastOrderError(null)
+                console.error("Fetch error:", err);
+            });
         
+        // Fetch last order after customer data is fetched successfully
+        setLastOrderLoading(true);
+        setLastOrderError(null);
+        setLastOrder(null);
+
+        fetch(`http://localhost:5000/api/last-order/${selectedChat}`)
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setLastOrder(null); // Set lastOrder to null to trigger the "No orders" message
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`); // Throw error for other status codes
+                    }
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    setLastOrder(data);
+                }
+                setLastOrderLoading(false);
+            })
+            .catch(err => {
+                setLastOrderError(err.message);
+                setLastOrderLoading(false);
+                console.error("Error fetching last order:", err);
+            });
+    } else {
+        setCustomer({ firstName: '', lastName: '', Phone: '', RUC: '' }); // Reset customer data to empty object
+        setLastOrder(null); // Reset last order data as well
+        setLastOrderLoading(false);
+        setLastOrderError(null);
     }
 }, [selectedChat])
  
   
   return (
-    <div className="w-1/3 bg-gray-800 p-4 flex flex-col overflow-y-auto">      
+    <div className="w-1/3 bg-gray-700 p-4 flex flex-col overflow-y-auto">      
       {/* perfil cliente */}
       <CustomerProfile
         className=""

@@ -27,6 +27,15 @@ const CustomerProfile = ({ customer }) => {
     }
   }, [customer])
 
+  useEffect(() => {
+    return () => {
+      if (isEditable) {
+        setIsEditable(false);
+      }
+    };
+  }, [customer])
+
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -50,6 +59,7 @@ const CustomerProfile = ({ customer }) => {
       })
       if (response.ok) {
         // Handle successful response
+        toggleEdit()
         console.log('Profile updated successfully');
       } else {
         // Handle error response
@@ -85,7 +95,7 @@ const CustomerProfile = ({ customer }) => {
                 <input
                   type="text"
                   name="nameWhatsapp"
-                  value={formData.nameWhatsapp}
+                  value={formData.whatName}
                   onChange={handleChange}
                   className="text-gray-400 p-2 ml-2 rounded w-full"
                   disabled={!isEditable}

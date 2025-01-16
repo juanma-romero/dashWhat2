@@ -70,7 +70,7 @@ export const updateOrder = async (req, res) => {
         status: updatedOrder.status
       } }
     )
-    console.log('modificado:', modificado);
+    //console.log('modificado:', modificado);
     res.json({ message: 'Order updated successfully' })
   }
   catch (error) {

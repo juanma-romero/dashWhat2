@@ -7,7 +7,8 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
     fechaSolicitud: '',
     fechaEntrega: '',
     items:[],
-    status: ''
+    status: '',
+    observations: ''
   })
 
   const [modOk, setModOk] = useState('')
@@ -23,13 +24,20 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
           _id: item._id,
           cantidad: item.cantidad
         })) : [],
-        status: lastOrder.status || ''
+        status: lastOrder.status || '',
+        observations: lastOrder.observations || ''
       });
     }
   }, [lastOrder])
 
   useEffect(() => {
+
     setModOk('');
+    return () => {
+      if (isEditable) {
+        setIsEditable(false);
+      }
+    };
   }, [formData]);
 
   const handleStatusChange = (e) => {
@@ -81,6 +89,16 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
     }
   }
 
+  const formatDate = (date) => {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  }
+
   return (
     <div className="border border-gray-600 rounded p-4 my-4">
     <h3 className="text-lg text-white font-bold mb-2 underline">Ultimo Pedido</h3>
@@ -97,7 +115,7 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
                   <input
                     type="text"
                     name="fechaSolicitud"
-                    value={formData.fechaSolicitud}
+                    value={formData && formData.fechaSolicitud ? formatDate(formData.fechaSolicitud) : ''}
                     onChange={handleChange}
                     className="text-gray-400 p-2 ml-2 rounded w-30"
                     disabled={!isEditable}
@@ -110,7 +128,7 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
                   <input
                     type="text"
                     name="fechaEntrega"
-                    value={formData.fechaEntrega}
+                    value={formData && formData.fechaEntrega ? formatDate(formData.fechaEntrega):''}
                     onChange={handleChange}
                     className="font-bold  p-2 ml-2 rounded w-30"
                     disabled={!isEditable}
@@ -159,7 +177,19 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
                   </td>
                 </tr>
               </React.Fragment>
-              ))}
+              ))}              
+              <tr className="mb-2">
+                <td className="text-gray-400">Observaciones:</td>
+                <td>
+                  <textarea
+                    name="observations"
+                    value={formData.observations}
+                    onChange={handleChange}
+                    className="text-gray-400 p-2 ml-2 rounded w-full"
+                    disabled={!isEditable}
+                  />
+                </td>
+              </tr>
               <tr className="mb-2">
                 <td className="text-gray-400">Estado:</td>
                 <td>

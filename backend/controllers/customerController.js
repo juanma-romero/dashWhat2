@@ -39,6 +39,7 @@ import dotenv from 'dotenv'
        name: `${customer['firstName']} ${customer['lastName']}`,
        phone: customer.Phone,
        RUC: customer.RUC,
+       whatName: customer.whatName,
        // ... other fields you want to send to the frontend
      }
  
@@ -91,7 +92,8 @@ import dotenv from 'dotenv'
             Phone: phone,
             RUC  
           }        
-        }
+        },
+        { upsert: true } // Insert a new document if no match is found
       )
   
       if (!updatedCustomer) {

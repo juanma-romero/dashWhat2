@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react' 
 import { io } from 'socket.io-client'
+import Header from './components/Header'
 
 //import Header from './components/Header'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -169,23 +170,20 @@ const App = () => {
   const selectedChatObject = chats.find(chat => chat.remoteJid === selectedChat)
 
   return (
+    <>
+    <Header />
     <div className="flex h-screen bg-gray-900">
       <Sidebar 
         selectedChat={selectedChat}
         products={products}
-        />
-      <div className="flex flex-col flex-1">
-        {/*<Header />*/}
-        <div className="flex flex-1 overflow-y-auto">
-          <ChatList 
+      />         
+      <ChatList 
             chats={chats} 
             handleChatClick={handleChatClick}
-            selectedChat={selectedChat}
-            
-            />
-            
+            selectedChat={selectedChat}            
+      />            
           {selectedChat && (
-          <ChatArea
+      <ChatArea
             stateConversation={selectedChatObject.stateConversation || 'No leido'}
             messagesRespuesta={messagesRespuesta}
             selectedChat={selectedChat}
@@ -193,11 +191,12 @@ const App = () => {
             handleMessageChange={handleMessageChange}
             handleSendMessage={handleSendMessage}
             onStateConversationChange={handleStateConversationChange}           
-          />
-          )}
-        </div>
-      </div>
+      />
+        )}
+        
+      
     </div>
+    </>
   )
 }
 
