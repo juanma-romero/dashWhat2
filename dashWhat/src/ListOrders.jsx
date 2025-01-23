@@ -38,6 +38,7 @@ const ListOrders = () => {
 
   const sortedOrders = orders.sort((a, b) => new Date(a.fechaEntrega) - new Date(b.fechaEntrega))
   return (
+    /*
     <div className="container mx-auto p-4 bg-gray-900 text-gray-200">
       <h1 className="text-2xl font-bold mb-4">Listado de Pedidos</h1>
       <table className="min-w-full bg-gray-700">
@@ -91,9 +92,42 @@ const ListOrders = () => {
         </tbody>
       </table>
     </div>
+    */
+    <div className="container mx-auto p-2 bg-gray-900 text-gray-200 text-sm">
+      <h1 className="text-xl font-bold mb-2">Listado de Pedidos</h1>
+      <div className="overflow-x-auto">
+        {sortedOrders.map((order) => (
+          <div key={order._id} className="grid grid-cols-1 gap-2 border-b border-gray-700 p-2">
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                {new Date(order.fechaEntrega).toLocaleString('es-ES', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+              <div className="truncate overflow-hidden whitespace-nowrap">
+                {order.contactName !== 'Nombre no encontrado' ? order.contactName : order.Phone}
+              </div>
+              <div>{order.status}</div>
+            </div>
+            {order.observations && (
+              <div className="col-span-3">
+                {order.observations}
+              </div>
+            )}
+            {order.items.map((item, index) => (
+              <div key={index} className="grid grid-cols-2 gap-2">
+                <div className="py-2 px-4 border-b">{getProductNameById(item._id)}</div>
+                <div className="py-2 px-4 border-b">{item.cantidad}</div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 export default ListOrders
 
-//${order.index % 2 === 0 ? 'bg-gray-600' : 'bg-gray-900'}
-//className={order.index % 2 === 0 ? 'bg-gray-600' : 'bg-gray-900'}

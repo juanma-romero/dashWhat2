@@ -12,4 +12,4 @@ router.get('/last-order/:chatId', getLastOrder);
 // Ruta para actualizar datos del cliente
 router.put('/customer-profile', updateCustomerProfile);
 
-export default router;
+export default router

@@ -51,14 +51,22 @@ const App = () => {
     socketRef.current.on('new-message', (messageData) => {  
       //console.log('Received new message:', messageData)
       setChats((prevChats) => {
-        const incomingJid = messageData.key.remoteJid
-        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);
+        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === messageData.key.remoteJid);
         
         if (chatIndex !== -1) {
+          const chatActualizado = prevChats[chatIndex];
+          //console.log('Chat que recibe el mensaje nuevo:', chatActualizado);
+          
+
+        // Crear una copia del chat con el estado actualizado
+            const updatedSingleChat = {
+              ...chatActualizado,
+              stateConversation: messageData.stateConversation
+          };
           // Create a new array with the updated chat
           const updatedChats = [...prevChats];
           updatedChats[chatIndex] = {
-            ...updatedChats[chatIndex],
+            ...updatedSingleChat,
             message: messageData.message,
             messageTimestamp: messageData.messageTimestamp,
           }
@@ -68,9 +76,10 @@ const App = () => {
         } else {
           return [
             {
-              remoteJid: incomingJid,
+              remoteJid: messageData.key.remoteJid,
               message: messageData.message,
               messageTimestamp: messageData.messageTimestamp,
+              stateConversation: messageData.stateConversation // Use the state from the backend
             },
             ...prevChats,
           ].sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp))
