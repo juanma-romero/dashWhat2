@@ -109,9 +109,36 @@ const App = () => {
   }, [])
 
 
-  const handleChatClick = (remoteJid) => {
-    setSelectedChat(remoteJid)
+  const handleChatClick = async (remoteJid) => {
+    setSelectedChat(remoteJid);
+
+  // Actualizar el estado de la conversación en el frontend
+  setChats(prevChats => {
+    const chatIndex = prevChats.findIndex(chat => chat.remoteJid === remoteJid);
+    if (chatIndex !== -1) {
+      const updatedChats = [...prevChats];
+      updatedChats[chatIndex] = {
+        ...updatedChats[chatIndex],
+        stateConversation: 'Atendiendo'
+      };
+      return updatedChats;
+    }
+    return prevChats;
+  });
+
+  // Actualizar el estado de la conversación en la base de datos
+  try {
+    await fetch(`http://localhost:5000/api/update-chat-state`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ remoteJid, stateConversation: 'Atendiendo' }),
+    });
+  } catch (error) {
+    console.error('Error updating chat state:', error);
   }
+};
 
   const handleMessageChange = (e) => {
     setMessageText(e.target.value);
