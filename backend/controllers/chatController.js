@@ -132,3 +132,26 @@ export const updateStateConversation = async (req, res) => {
     res.status(500).send('Error actualizando el estado de la conversación');
   }
 }
+
+// Función para actualizar el estado de la conversación al ser clickeado un nuevo mensaje entrante
+export const updateStateConversationNewMessage = async (req, res) => {
+  const { remoteJid, stateConversation } = req.body;
+
+  try {
+    const result = await collection.updateOne(
+      { remoteJid: remoteJid },
+      {
+        $set: { stateConversation: stateConversation }
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.sendStatus(200);
+    } else {
+      res.status(404).send('Chat not found');
+    }
+  } catch (err) {
+    console.error('Error updating chat state in MongoDB:', err);
+    res.status(500).send('Error updating chat state');
+  }
+}

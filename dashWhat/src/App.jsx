@@ -51,14 +51,22 @@ const App = () => {
     socketRef.current.on('new-message', (messageData) => {  
       //console.log('Received new message:', messageData)
       setChats((prevChats) => {
-        const incomingJid = messageData.key.remoteJid
-        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === incomingJid);
+        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === messageData.key.remoteJid);
         
         if (chatIndex !== -1) {
+          const chatActualizado = prevChats[chatIndex];
+          //console.log('Chat que recibe el mensaje nuevo:', chatActualizado);
+          
+
+        // Crear una copia del chat con el estado actualizado
+            const updatedSingleChat = {
+              ...chatActualizado,
+              stateConversation: messageData.stateConversation
+          };
           // Create a new array with the updated chat
           const updatedChats = [...prevChats];
           updatedChats[chatIndex] = {
-            ...updatedChats[chatIndex],
+            ...updatedSingleChat,
             message: messageData.message,
             messageTimestamp: messageData.messageTimestamp,
           }
@@ -68,9 +76,10 @@ const App = () => {
         } else {
           return [
             {
-              remoteJid: incomingJid,
+              remoteJid: messageData.key.remoteJid,
               message: messageData.message,
               messageTimestamp: messageData.messageTimestamp,
+              stateConversation: messageData.stateConversation // Use the state from the backend
             },
             ...prevChats,
           ].sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp))
@@ -100,9 +109,42 @@ const App = () => {
   }, [])
 
 
-  const handleChatClick = (remoteJid) => {
-    setSelectedChat(remoteJid)
+  const handleChatClick = async (remoteJid) => {
+    setSelectedChat(remoteJid);
+
+  // Actualizar el estado de la conversación en el frontend
+  setChats(prevChats => {
+    const chatIndex = prevChats.findIndex(chat => chat.remoteJid === remoteJid);
+    if (chatIndex !== -1) {
+      const chat = prevChats[chatIndex];
+      if (chat.stateConversation === 'No leido') {
+        const updatedChats = [...prevChats];
+        updatedChats[chatIndex] = {
+          ...updatedChats[chatIndex],
+          stateConversation: 'Atendiendo'
+        };
+        return updatedChats;
+      }
+    }
+    return prevChats;
+  });
+
+  // Actualizar el estado de la conversación en la base de datos
+  try {
+    const chat = chats.find(chat => chat.remoteJid === remoteJid);
+    if (chat && chat.stateConversation === 'No leido') {
+      await fetch(`http://localhost:5000/api/update-chat-state`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ remoteJid, stateConversation: 'Atendiendo' }),
+      });
+    }
+  } catch (error) {
+    console.error('Error updating chat state:', error);
   }
+};
 
   const handleMessageChange = (e) => {
     setMessageText(e.target.value);

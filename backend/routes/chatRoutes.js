@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllChats, getChatMessages, updateStateConversation } from '../controllers/chatController.js';
+import { getAllChats, getChatMessages, updateStateConversation, updateStateConversationNewMessage } from '../controllers/chatController.js';
 
 const router = express.Router();
 
@@ -11,5 +11,8 @@ router.get('/messages/:remoteJid', getChatMessages);
 
 //Ruta para modificar el estado de la conversación
 router.put('/state-conversation', updateStateConversation);
+
+// Ruta para actualizar el estado de la conversación al ser clickeado un nuevo mensaje entrante
+router.post('/update-chat-state', updateStateConversationNewMessage);
 
 export default router;

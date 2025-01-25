@@ -75,15 +75,34 @@ app.post('/api/messages', async (req, res) => {
     const remoteJid = messageData.key.remoteJid;
     const messageID = messageData.key.id;
 
+    // Fetch the current chat state
+    const chat = await collection.findOne({ remoteJid: remoteJid });
+    let updatedStateConversation = 'No leido'; // Default state for new messages
+
+    if (chat) {
+      if (chat.stateConversation === 'Resuelto') {
+        updatedStateConversation = 'No leido';
+      } else {
+        updatedStateConversation = chat.stateConversation;
+      }
+    }
+
     const result = await collection.updateOne(
       { remoteJid: remoteJid },
       {
-        $set: { [messageID]: messageData },
+        $set: { 
+          [messageID]: messageData,
+          stateConversation: updatedStateConversation
+        },
         $setOnInsert: { remoteJid: remoteJid }
       },
       { upsert: true }
-    )
-    const transformedMessage = { ...messageData, _id: result.upsertedId ? result.upsertedId._id : null };
+    );
+    const transformedMessage = { 
+      ...messageData, 
+      _id: result.upsertedId ? result.upsertedId._id : null,
+      stateConversation: updatedStateConversation // Include the updated state
+    };
     //console.log(transformedMessage);
     io.emit('new-message', transformedMessage);
     res.sendStatus(200);
