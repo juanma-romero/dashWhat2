@@ -1,9 +1,13 @@
 import {makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
 import axios from 'axios'
 import express from 'express'
+import pino from 'pino';
+//import Redis from 'ioredis'
 
 const app = express()
 app.use(express.json())
+
+//const redis = new Redis()
 
 async function connectToWhatsApp () {
 
@@ -12,7 +16,9 @@ async function connectToWhatsApp () {
     const sock = makeWASocket({
         // can provide additional config here
         printQRInTerminal: true,
-        auth: state                  
+        auth: state,
+        logger: pino({ level: 'silent' })
+                        
     })
 
     // maneja las credenciales
