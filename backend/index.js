@@ -112,7 +112,6 @@ app.post('/api/messages', async (req, res) => {
   }
 })
 
-
 // Ruta REST recibe mensajes emitidos de Frontend, reenviados a Baileys
 io.on("connection", (socket) => {
   socket.on("send-message-from-frontend", async (msg) => {
