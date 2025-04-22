@@ -3,7 +3,7 @@ import http from 'http'
 import { Server } from 'socket.io' 
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { MongoClient } from 'mongodb';
+import { MongoClient } from 'mongodb'
 
 
 // rutas
@@ -11,6 +11,9 @@ import chatRoutes from './routes/chatRoutes.js'
 import customerRoutes from './routes/customerRoutes.js'
 //import messageRoutes from './routes/messageRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
+
+// funcion llama a llm
+import { llamaApi } from './utils/llamallm.js';
 
 const app = express()
 const server = http.createServer(app)
@@ -31,6 +34,7 @@ io.on("connection", (socket) => {
 
 dotenv.config()
 
+
 // Conexión a la base de datos
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
@@ -49,7 +53,7 @@ async function connectToDatabase() {
 }
 connectToDatabase()
 
-// Middleware para manejar CORS en Express 
+// Middleware para manejar CORS en Express
 app.use(cors({
   origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT'],
@@ -68,13 +72,16 @@ app.use('/api', customerRoutes)
 // Usar las rutas de pedidos
 app.use('/api', orderRoutes)
 
+
+
+// recibe mensajes de baileys
 app.post('/api/messages', async (req, res) => {
   const messageData = req.body.message;
 
   try {
     const remoteJid = messageData.key.remoteJid;
     const messageID = messageData.key.id;
-
+    
     // Fetch the current chat state
     const chat = await collection.findOne({ remoteJid: remoteJid });
     let updatedStateConversation = 'No leido'; // Default state for new messages
@@ -103,9 +110,14 @@ app.post('/api/messages', async (req, res) => {
       _id: result.upsertedId ? result.upsertedId._id : null,
       stateConversation: updatedStateConversation // Include the updated state
     };
-    //console.log(transformedMessage);
-    io.emit('new-message', transformedMessage);
-    res.sendStatus(200);
+    //console.log(transformedMessage)
+    io.emit('new-message', transformedMessage)
+    res.sendStatus(200)
+    
+    if (transformedMessage.message==='te agendo el pedido') {           
+      //console.log(transformedMessage.key.remoteJid)      
+      llamaApi(transformedMessage.key.remoteJid)      
+    }   
   } catch (err) {
     console.error('Error storing message in MongoDB:', err);
     res.status(500).send('Error storing message');
@@ -139,6 +151,8 @@ io.on("connection", (socket) => {
     }
   });
 })
+
+export { collection }
 
 server.listen(5000, () => {
   console.log('Server is listening on port 5000')

@@ -15,4 +15,4 @@ router.put('/state-conversation', updateStateConversation);
 // Ruta para actualizar el estado de la conversación al ser clickeado un nuevo mensaje entrante
 router.post('/update-chat-state', updateStateConversationNewMessage);
 
-export default router;
+export default router

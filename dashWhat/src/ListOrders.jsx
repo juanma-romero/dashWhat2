@@ -38,7 +38,7 @@ const ListOrders = () => {
 
   const sortedOrders = orders.sort((a, b) => new Date(a.fechaEntrega) - new Date(b.fechaEntrega))
   return (
-    /*
+    
     <div className="container mx-auto p-4 bg-gray-900 text-gray-200">
       <h1 className="text-2xl font-bold mb-4">Listado de Pedidos</h1>
       <table className="min-w-full bg-gray-700">
@@ -92,7 +92,7 @@ const ListOrders = () => {
         </tbody>
       </table>
     </div>
-    */
+    /*
     <div className="container mx-auto p-2 bg-gray-900 text-gray-200 text-sm">
       <h1 className="text-xl font-bold mb-2">Listado de Pedidos</h1>
       <div className="overflow-x-auto">
@@ -126,7 +126,7 @@ const ListOrders = () => {
           </div>
         ))}
       </div>
-    </div>
+    </div>*/
   )
 }
 export default ListOrders
