@@ -17,6 +17,7 @@ import { llamaApi } from './utils/llamallm.js';
 
 const app = express()
 const server = http.createServer(app)
+//const path = require('path')
 app.use(express.json())
 
 // Declara Socket.io y Configurar CORS
@@ -128,7 +129,7 @@ app.post('/api/messages', async (req, res) => {
 io.on("connection", (socket) => {
   socket.on("send-message-from-frontend", async (msg) => {
     try {
-      const response = await fetch('http://localhost:3000/send-message', {
+      const response = await fetch('http://http://localhost:3000/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,6 +154,14 @@ io.on("connection", (socket) => {
 })
 
 export { collection }
+
+// Servir archivos estáticos del frontend
+//app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Para cualquier otra ruta GET no manejada por la API, devolver index.html (para SPA)
+/*app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+});*/
 
 server.listen(5000, () => {
   console.log('Server is listening on port 5000')
