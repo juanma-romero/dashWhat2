@@ -1,9 +1,12 @@
 import {makeWASocket, DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
 import axios from 'axios'
 import express from 'express'
+import QRCode from 'qrcode'
 
 const app = express()
 app.use(express.json())
+
+let qrCodeDataUrl = null; // Variable to store QR code data URL
 
 async function connectToWhatsApp () {
 
@@ -11,7 +14,7 @@ async function connectToWhatsApp () {
 
     const sock = makeWASocket({
         // can provide additional config here
-        printQRInTerminal: true,
+        printQRInTerminal: false, // Changed to false
         auth: state                  
     })
 
@@ -21,8 +24,12 @@ async function connectToWhatsApp () {
     
 
     // maneja la coneccion de baileys
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update
+        if (qr) {
+            qrCodeDataUrl = await QRCode.toDataURL(qr);
+            console.log('QR code generated. Scan it at http://localhost:8080/qr');
+        }
         if(connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut
             console.log('connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect)
@@ -78,6 +85,36 @@ async function connectToWhatsApp () {
         }
     })   
 
+    app.get('/qr', (req, res) => {
+        if (qrCodeDataUrl) {
+            res.send(`
+                <html>
+                    <head>
+                        <title>WhatsApp QR Code</title>
+                        <style>
+                            body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; }
+                            img { max-width: 100%; max-height: 100%; }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${qrCodeDataUrl}" alt="WhatsApp QR Code" />
+                    </body>
+                </html>
+            `);
+        } else {
+            res.status(404).send(`
+                <html>
+                    <head><title>QR Code Not Ready</title></head>
+                    <body>
+                        <h1>QR code is not available yet.</h1>
+                        <p>Please wait for the QR code to be generated and refresh this page.</p>
+                        <script>setTimeout(() => window.location.reload(), 5000);</script>
+                    </body>
+                </html>
+            `);
+        }
+    });
+
     app.post('/send-message', async (req, res) => {
         try {
           const { remoteJid, message } = req.body; // Extract ONLY remoteJid and message text
@@ -94,7 +131,7 @@ async function connectToWhatsApp () {
 }
 connectToWhatsApp()
 
-const port = 3000
+const port = 8080; // Changed port
 app.listen(port, () => {
-    console.log(`Baileys server listening on port ${port}`)
+    console.log(`Baileys server listening on port ${port}. QR code will be available at http://localhost:${port}/qr`);
 })
