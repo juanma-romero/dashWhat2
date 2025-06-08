@@ -1,30 +1,21 @@
-import { MongoClient } from 'mongodb'
-import dotenv from 'dotenv'
-
-
-dotenv.config()
-
-// Conexión a la base de datos
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
+import { connectToDatabase } from '../utils/db.js';
 
 let collection;
 let collectionContacto;
 let collectionPedidos;
 
-async function connectToDatabase() {
+// Inicializar conexión a la base de datos
+async function initializeDatabase() {
   try {
-    await client.connect();
-    console.log('Connected to MongoDB ChatController.js');
-    const db = client.db('dash');
+    const { db } = await connectToDatabase();
     collection = db.collection('chats');
     collectionContacto = db.collection('contactosGoogle');
     collectionPedidos = db.collection('Pedidos');
   } catch (err) {
-    console.error('Error connecting to MongoDB:', err);
+    console.error('Error initializing database in chatController:', err);
   }
 }
-connectToDatabase();
+initializeDatabase();
 
 // Función para obtener todos los chats
 export const getAllChats = async (req, res) => {

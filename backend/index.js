@@ -3,8 +3,7 @@ import http from 'http'
 import { Server } from 'socket.io' 
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { MongoClient } from 'mongodb';
-
+import { connectToDatabase } from './utils/db.js';
 
 // rutas
 import chatRoutes from './routes/chatRoutes.js'
@@ -31,23 +30,20 @@ io.on("connection", (socket) => {
 
 dotenv.config()
 
-// Conexión a la base de datos
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
-
+// Variable para la colección
 let collection;
 
-async function connectToDatabase() {
+// Inicializar conexión a la base de datos
+async function initializeDatabase() {
   try {
-    await client.connect();
-    console.log('Connected to MongoDB index.js');
-    const db = client.db('dash');
+    const { db } = await connectToDatabase();
     collection = db.collection('chats');
   } catch (err) {
-    console.error('Error connecting to MongoDB:', err);
+    console.error('Error initializing database:', err);
+    process.exit(1);
   }
 }
-connectToDatabase()
+initializeDatabase();
 
 // Middleware para manejar CORS en Express 
 app.use(cors({
@@ -144,5 +140,3 @@ io.on("connection", (socket) => {
 server.listen(5000, () => {
   console.log('Server is listening on port 5000')
 })
-
-

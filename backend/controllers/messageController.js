@@ -1,5 +1,20 @@
+import { connectToDatabase } from '../utils/db.js';
+
+let collection;
+
+// Inicializar conexión a la base de datos
+async function initializeDatabase() {
+  try {
+    const { db } = await connectToDatabase();
+    collection = db.collection('chats');
+  } catch (err) {
+    console.error('Error initializing database in messageController:', err);
+  }
+}
+initializeDatabase();
+
 // Función para almacenar mensajes
-export const storeMessage = async (req, res) => {
+export const storeMessage = async (req, res, io) => {
   const messageData = req.body.message;
 
   try {
@@ -24,5 +39,3 @@ export const storeMessage = async (req, res) => {
     res.status(500).send('Error storing message');
   }
 }
-
-  

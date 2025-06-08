@@ -1,26 +1,19 @@
-import dotenv from 'dotenv'
- dotenv.config()
- import { MongoClient } from 'mongodb';
+import { connectToDatabase } from '../utils/db.js';
 
- // Conexión a la base de datos
- const uri = process.env.MONGODB_URI;
- const client = new MongoClient(uri);
- 
- let collectionContacto;
- let collectionPedidos;
- 
- async function connectToDatabase() {
-   try {
-     await client.connect();
-     console.log('Connected to MongoDB customerController.js');
-     const db = client.db('dash');
-     collectionContacto = db.collection('contactosGoogle');
-     collectionPedidos = db.collection('Pedidos');
-   } catch (err) {
-     console.error('Error connecting to MongoDB:', err);
-   }
- }
- connectToDatabase();
+let collectionContacto;
+let collectionPedidos;
+
+// Inicializar conexión a la base de datos
+async function initializeDatabase() {
+  try {
+    const { db } = await connectToDatabase();
+    collectionContacto = db.collection('contactosGoogle');
+    collectionPedidos = db.collection('Pedidos');
+  } catch (err) {
+    console.error('Error initializing database in customerController:', err);
+  }
+}
+initializeDatabase();
  
  // Función para obtener datos del cliente
  export const getCustomerData = async (req, res) => {
@@ -106,5 +99,3 @@ import dotenv from 'dotenv'
       res.status(500).json({ message: 'Server error' });
     }
   }
-
-  

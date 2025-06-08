@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react' 
+import { useState, useEffect, useRef } from 'react' 
 import { io } from 'socket.io-client'
 import Header from './components/Header'
-
-//import Header from './components/Header'
 import Sidebar from './components/Sidebar/Sidebar'
 import ChatList from './components/ChatList'
 import ChatArea from './components/ChatArea' 
@@ -215,10 +213,8 @@ const App = () => {
     <>
     <Header />
     <div className="flex h-screen bg-gray-900">
-      <Sidebar 
-        selectedChat={selectedChat}
-        products={products}
-      />         
+
+              
       <ChatList 
             chats={chats} 
             handleChatClick={handleChatClick}
@@ -234,8 +230,12 @@ const App = () => {
             handleSendMessage={handleSendMessage}
             onStateConversationChange={handleStateConversationChange}           
       />
-        )}
-        
+        )
+        }
+        <Sidebar 
+        selectedChat={selectedChat}
+        products={products}
+      /> 
       
     </div>
     </>

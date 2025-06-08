@@ -1,29 +1,22 @@
-import { MongoClient, ObjectId } from 'mongodb';
-import dotenv from 'dotenv'
-
-dotenv.config()
-
-// Conexión a la base de datos
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
+import { ObjectId } from 'mongodb';
+import { connectToDatabase } from '../utils/db.js';
 
 let collectionPedidos;
 let collectionProductos;
 let collectionUsuarios;
 
-async function connectToDatabase() {
+// Inicializar conexión a la base de datos
+async function initializeDatabase() {
   try {
-    await client.connect();
-    console.log('Connected to MongoDB orderController.js');
-    const db = client.db('dash');
+    const { db } = await connectToDatabase();
     collectionPedidos = db.collection('Pedidos');
     collectionProductos = db.collection('productos');
     collectionUsuarios = db.collection('contactosGoogle');
   } catch (err) {
-    console.error('Error connecting to MongoDB:', err);
+    console.error('Error initializing database in orderController:', err);
   }
 }
-connectToDatabase();
+initializeDatabase();
 
 // rutas para pedidos y para productos
 
