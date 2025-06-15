@@ -99,17 +99,54 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
 
                     </div>
                 )}
-                <div className="space-y-4 flex-1 overflow-y-auto flex flex-col scrollbar-thumb-gray-900 scrollbar-track-gray-100">
-                    {allMessages.map((message) => (
+                <div className="space-y-4 flex-1 overflow-y-auto flex flex-col scrollbar-thumb-gray-900 scrollbar-track-gray-100"> {/* `message` is our structured object */}
+                    {allMessages.map((msg) => (
                         <div
-                            key={message.key.id} // Use WhatsApp ID if available, otherwise clientId
+                            key={msg.key.id} 
                             className={`${
-                                message.key.fromMe ? 'bg-blue-500 text-white text-right ml-auto' : 'bg-gray-200 text-left'
+                                msg.key.fromMe ? 'bg-blue-500 text-white text-right ml-auto' : 'bg-gray-200 text-left'
                             } p-3 rounded-lg max-w-xs`}
-                        >
-                            <div>{message.message}</div>
-                            <div className="text-xs text-gray-500">
-                                {new Date(message.messageTimestamp).toLocaleTimeString(undefined, {
+                        > 
+                            {/* Display Quoted Message */}
+                            {msg.quotedMessage && (
+                                <div className={`p-2 rounded-md mb-2 text-sm ${msg.key.fromMe ? 'bg-blue-400' : 'bg-gray-300'}`}>
+                                    <p className="font-semibold">{msg.quotedMessage.senderJid === msg.key.remoteJid ? (msg.pushName || msg.quotedMessage.senderJid.split('@')[0]) : 'You'}</p>
+                                    <p className="truncate">{msg.quotedMessage.content}</p>
+                                </div>
+                            )}
+
+                            {/* Display Main Message Content */}
+                            {msg.type === 'text' && (
+                                <div>{msg.content}</div>
+                            )}
+                            {msg.type === 'image' && (
+                                <div>
+                                    <img src={msg.content} alt={msg.caption || 'Image'} className="max-w-full h-auto rounded mb-1" />
+                                    {msg.caption && <p className="text-sm mt-1">{msg.caption}</p>}
+                                </div>
+                            )}
+                            {(msg.type === 'contact' || msg.type === 'contact_array') && msg.contactInfo && (
+                                <div className="bg-gray-100 p-3 rounded shadow text-gray-800">
+                                    <p className="font-bold text-blue-600">👤 Contact Card</p>
+                                    <p><strong>Name:</strong> {msg.contactInfo.displayName}</p>
+                                    {msg.contactInfo.phoneNumber && msg.contactInfo.phoneNumber !== 'N/A' && (
+                                        <p><strong>Tel:</strong> {msg.contactInfo.fullNumber || msg.contactInfo.phoneNumber}</p>
+                                    )}
+                                    {/* You could add a button to "Save Contact" or "Message Contact" here */}
+                                </div>
+                            )}
+                            {msg.type === 'unsupported' && (
+                                <div className="italic text-gray-500">
+                                    {msg.content}
+                                </div>
+                            )}
+                            {/* Fallback for messages that might not have type/content (e.g. old data or unhandled types) */}
+                            {!msg.type && msg.message && (
+                                 <div>{msg.message}</div>
+                            )}
+
+                            <div className="text-xs mt-1 ${msg.key.fromMe ? 'text-gray-300' : 'text-gray-500'}">
+                                {new Date(msg.messageTimestamp).toLocaleTimeString(undefined, {
                                     hour: '2-digit',
                                     minute: '2-digit',
                                 })}

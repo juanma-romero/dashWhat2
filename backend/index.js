@@ -13,7 +13,10 @@ import orderRoutes from './routes/orderRoutes.js'
 
 const app = express()
 const server = http.createServer(app)
-app.use(express.json())
+
+// Increase the limit for JSON payloads
+app.use(express.json({ limit: '50mb' })); // You can adjust '50mb' as needed
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // Also for URL-encoded data if you use it
 
 // Declara Socket.io y Configurar CORS
 const io = new Server(server, {
@@ -71,10 +74,10 @@ app.post('/api/messages', async (req, res) => {
     const remoteJid = messageData.key.remoteJid;
     const messageID = messageData.key.id;
 
-    // Fetch the current chat state
+    // Fetch the current chat state (messageData is now our structured object from api/main.js)
     const chat = await collection.findOne({ remoteJid: remoteJid });
     let updatedStateConversation = 'No leido'; // Default state for new messages
-
+    
     if (chat) {
       if (chat.stateConversation === 'Resuelto') {
         updatedStateConversation = 'No leido';
@@ -82,12 +85,12 @@ app.post('/api/messages', async (req, res) => {
         updatedStateConversation = chat.stateConversation;
       }
     }
-
+    
     const result = await collection.updateOne(
       { remoteJid: remoteJid },
       {
         $set: { 
-          [messageID]: messageData,
+          [messageID]: messageData, // Store the full structured messageData
           stateConversation: updatedStateConversation
         },
         $setOnInsert: { remoteJid: remoteJid }
@@ -95,9 +98,16 @@ app.post('/api/messages', async (req, res) => {
       { upsert: true }
     );
     const transformedMessage = { 
-      ...messageData, 
       _id: result.upsertedId ? result.upsertedId._id : null,
-      stateConversation: updatedStateConversation // Include the updated state
+      stateConversation: updatedStateConversation, // Include the updated state
+      key: messageData.key,
+      type: messageData.type,
+      content: messageData.content,
+      caption: messageData.caption, // Will be undefined for text messages, which is fine
+      contactInfo: messageData.contactInfo, // For contact messages
+      quotedMessage: messageData.quotedMessage, // For replies
+      messageTimestamp: messageData.messageTimestamp,
+      pushName: messageData.pushName
     };
     //console.log(transformedMessage);
     io.emit('new-message', transformedMessage);

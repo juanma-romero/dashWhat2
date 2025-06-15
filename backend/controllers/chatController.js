@@ -21,7 +21,7 @@ initializeDatabase();
 export const getAllChats = async (req, res) => {
   try {
     const allChats = await collection.find({}).toArray()
-    const transformedChats = allChats.map(chat => {
+    const transformedChats = allChats.map(chat => { // chat documents now store structured messages
       const messages = Object.values(chat).filter(val => typeof val === 'object' && val !== null && 'messageTimestamp' in val)
 
       if (messages.length === 0) {
@@ -31,12 +31,24 @@ export const getAllChats = async (req, res) => {
       const latestMessage = messages.reduce((latest, current) => {
         return new Date(latest.messageTimestamp) > new Date(current.messageTimestamp) ? latest : current;
       })
-
+      // latestMessage is now our structured message object { type, content, caption, contactInfo, quotedMessage ... }
+      let summaryMessage = latestMessage.content || '';
+      if (latestMessage.type === 'image') {
+        summaryMessage = latestMessage.caption || '📷 Image';
+      } else if (latestMessage.type === 'contact' || latestMessage.type === 'contact_array') {
+        summaryMessage = `👤 Contact: ${latestMessage.contactName || latestMessage.contactInfo?.displayName || 'Contact Card'}`;
+      } else if (latestMessage.type === 'unsupported') {
+        summaryMessage = latestMessage.content; // e.g., "[Unsupported message type: ...]"
+      }
       return {
         remoteJid: chat.remoteJid,
-        message: latestMessage.message,
+        // Provide a summary for the chat list
+        message: summaryMessage,
+        messageType: latestMessage.type,
+        // messageContent: latestMessage.content, // Could be useful later
+        // messageCaption: latestMessage.caption, // Could be useful later
         messageTimestamp: latestMessage.messageTimestamp,
-        stateConversation: chat.stateConversation 
+        stateConversation: chat.stateConversation
       }
     })
 
@@ -84,7 +96,7 @@ export const getChatMessages = async (req, res) => {
 
     // Extraer mensajes y convertir a array
     const messages = Object.values(chat).filter(
-      (val) => typeof val === 'object' && val !== null && 'messageTimestamp' in val
+      (val) => typeof val === 'object' && val !== null && 'messageTimestamp' in val && 'key' in val // val is our structured message
     );
 
     // Ordenar mensajes por marca de tiempo

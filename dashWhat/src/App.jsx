@@ -46,11 +46,11 @@ const App = () => {
   // conecta socket.io y recibe mensajes desde baileys
   useEffect(() => {
     socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
-    socketRef.current.on('new-message', (messageData) => {  
-      //console.log('Received new message:', messageData)
+    socketRef.current.on('new-message', (newMessageData) => {  // newMessageData is the transformedMessage from backend
+      //console.log('Received new message:', newMessageData)
       setChats((prevChats) => {
-        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === messageData.key.remoteJid);
-        
+        const chatIndex = prevChats.findIndex(chat => chat.remoteJid === newMessageData.key.remoteJid);
+
         if (chatIndex !== -1) {
           const chatActualizado = prevChats[chatIndex];
           //console.log('Chat que recibe el mensaje nuevo:', chatActualizado);
@@ -59,25 +59,39 @@ const App = () => {
         // Crear una copia del chat con el estado actualizado
             const updatedSingleChat = {
               ...chatActualizado,
-              stateConversation: messageData.stateConversation
+              stateConversation: newMessageData.stateConversation
           };
           // Create a new array with the updated chat
           const updatedChats = [...prevChats];
           updatedChats[chatIndex] = {
             ...updatedSingleChat,
-            message: messageData.message,
-            messageTimestamp: messageData.messageTimestamp,
+            message: 
+              newMessageData.type === 'image' 
+                ? (newMessageData.caption || '📷 Image') 
+              : newMessageData.type === 'contact' || newMessageData.type === 'contact_array'
+                ? `👤 Contact: ${newMessageData.contactInfo?.displayName || 'Card'}`
+              : newMessageData.type === 'unsupported'
+                ? newMessageData.content // Show the "[Unsupported...]" message
+              : newMessageData.content, // Default to content for text and others
+            messageType: newMessageData.type,
+            messageTimestamp: newMessageData.messageTimestamp,
           }
           
           // Sort the new array
           return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp));
         } else {
+          // New chat
           return [
             {
-              remoteJid: messageData.key.remoteJid,
-              message: messageData.message,
-              messageTimestamp: messageData.messageTimestamp,
-              stateConversation: messageData.stateConversation // Use the state from the backend
+              remoteJid: newMessageData.key.remoteJid,
+              message: 
+                newMessageData.type === 'image' ? (newMessageData.caption || '📷 Image') 
+                : newMessageData.type === 'contact' || newMessageData.type === 'contact_array' ? `👤 Contact: ${newMessageData.contactInfo?.displayName || 'Card'}`
+                : newMessageData.type === 'unsupported' ? newMessageData.content
+                : newMessageData.content,
+              messageType: newMessageData.type,
+              messageTimestamp: newMessageData.messageTimestamp,
+              stateConversation: newMessageData.stateConversation 
             },
             ...prevChats,
           ].sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp))
@@ -157,9 +171,10 @@ const App = () => {
           remoteJid: selectedChat,
           id: Math.random().toString(36).substring(2, 15), // Temporary client-side ID
         },
-        message: messageText, 
+        type: 'text', // Add type for consistency
+        content: messageText, // Rename message to content
         messageTimestamp: new Date().toISOString(),
-        remoteJid: selectedChat        
+        remoteJid: selectedChat
       }      
       
       //envia mensaje a backend
@@ -172,8 +187,9 @@ const App = () => {
           const updatedChats = [...prevChats];
           updatedChats[chatIndex] = {
             ...updatedChats[chatIndex], 
-            message: newMessage.message,     
+            message: newMessage.content, // Use content for local update
             messageTimestamp: newMessage.messageTimestamp,
+            messageType: newMessage.type, // Use type for local update
           }
   
           return updatedChats.sort((a, b) => new Date(b.messageTimestamp) - new Date(a.messageTimestamp));
@@ -182,7 +198,8 @@ const App = () => {
           return [
             {
               remoteJid: selectedChat,
-              message: newMessage.message,
+              message: newMessage.content,
+              messageType: newMessage.type,
               messageTimestamp: newMessage.messageTimestamp,
             },
             ...prevChats,
@@ -192,7 +209,7 @@ const App = () => {
       // limpia campo de envio de mensaje  
       setMessageText('')
       // carga mensaje en state para renderizar dentro de ChatArea
-      if (selectedChat) { // Check if a chat is selected
+      if (selectedChat) { 
         setMessagesRespuesta(prevMessages => [...prevMessages, newMessage])
       }
     }
