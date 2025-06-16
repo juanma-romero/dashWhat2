@@ -7,3 +7,4 @@ mensaje.txt
 dashWhat2.code-workspace
 backend/utils/dbUtils.js
 backend/utils/dbUtilsPush.js
+backend/services/ia-services/node_modules

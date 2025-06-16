@@ -11,12 +11,14 @@ import customerRoutes from './routes/customerRoutes.js'
 //import messageRoutes from './routes/messageRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 
+// Importar el nuevo servicio de procesamiento de pedidos
+import { processOrderFromConversation } from './services/order-processing-service.js';
 const app = express()
 const server = http.createServer(app)
 
 // Increase the limit for JSON payloads
-app.use(express.json({ limit: '50mb' })); // You can adjust '50mb' as needed
-app.use(express.urlencoded({ limit: '50mb', extended: true })); // Also for URL-encoded data if you use it
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true })); 
 
 // Declara Socket.io y Configurar CORS
 const io = new Server(server, {
@@ -28,7 +30,7 @@ const io = new Server(server, {
   }
 })
 io.on("connection", (socket) => {
-  console.log('New client connected:')
+  console.log('New client connected:', socket.id);
 })
 
 dotenv.config()
@@ -41,9 +43,10 @@ async function initializeDatabase() {
   try {
     const { db } = await connectToDatabase();
     collection = db.collection('chats');
-  } catch (err) {
-    console.error('Error initializing database:', err);
-    process.exit(1);
+    console.log("Conexión a la base de datos y colección 'chats' inicializada.");
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    process.exit(1); // Salir si la BD no se puede inicializar
   }
 }
 initializeDatabase();
@@ -70,6 +73,26 @@ app.use('/api', orderRoutes)
 app.post('/api/messages', async (req, res) => {
   const messageData = req.body.message;
 
+  if (!messageData || !messageData.key || !messageData.key.remoteJid || !messageData.key.id) {
+    console.error("Datos del mensaje incompletos o inválidos recibidos en /api/messages:", messageData);
+    return res.status(400).send('Datos del mensaje incompletos o inválidos.');
+  }
+
+  // Verificar si el mensaje es la clave para activar el procesamiento del pedido
+  // y si messageData.content existe
+  if (messageData.content && messageData.content.toLowerCase() === 'te tomo el pedido') {
+    console.log(`[IndexJS] Mensaje clave 'te tomo el pedido' detectado para ${messageData.key.remoteJid}.`);
+    // Llamar al servicio de procesamiento de pedidos.
+    // Pasamos la 'collection' para que el servicio pueda acceder a la BD.
+    // No usamos 'await' aquí para que la respuesta al cliente (res.sendStatus(200)) sea rápida.
+    // El procesamiento del pedido con Gemini puede ocurrir en segundo plano.
+    processOrderFromConversation(messageData.key.remoteJid, collection)
+      .catch(err => {
+        // Es buena idea tener un manejo de errores aquí para el proceso en segundo plano
+        console.error("[IndexJS] Error en el procesamiento de pedido en segundo plano:", err);
+      });
+  }
+
   try {
     const remoteJid = messageData.key.remoteJid;
     const messageID = messageData.key.id;
@@ -77,13 +100,9 @@ app.post('/api/messages', async (req, res) => {
     // Fetch the current chat state (messageData is now our structured object from api/main.js)
     const chat = await collection.findOne({ remoteJid: remoteJid });
     let updatedStateConversation = 'No leido'; // Default state for new messages
-    
+
     if (chat) {
-      if (chat.stateConversation === 'Resuelto') {
-        updatedStateConversation = 'No leido';
-      } else {
-        updatedStateConversation = chat.stateConversation;
-      }
+      updatedStateConversation = chat.stateConversation === 'Resuelto' ? 'No leido' : chat.stateConversation;
     }
     
     const result = await collection.updateOne(
@@ -96,9 +115,11 @@ app.post('/api/messages', async (req, res) => {
         $setOnInsert: { remoteJid: remoteJid }
       },
       { upsert: true }
-    );
-    const transformedMessage = { 
-      _id: result.upsertedId ? result.upsertedId._id : null,
+    )
+    
+    const transformedMessage = {
+      _id: result.upsertedId ? result.upsertedId._id : (chat && chat._id ? chat._id.toString() : null), // Asegurar que _id del chat se propague si existe
+      chatRemoteJid: remoteJid, // Añadir remoteJid al objeto emitido para el frontend
       stateConversation: updatedStateConversation, // Include the updated state
       key: messageData.key,
       type: messageData.type,
@@ -109,7 +130,7 @@ app.post('/api/messages', async (req, res) => {
       messageTimestamp: messageData.messageTimestamp,
       pushName: messageData.pushName
     };
-    //console.log(transformedMessage);
+
     io.emit('new-message', transformedMessage);
     res.sendStatus(200);
   } catch (err) {
@@ -122,6 +143,12 @@ app.post('/api/messages', async (req, res) => {
 // Ruta REST recibe mensajes emitidos de Frontend, reenviados a Baileys
 io.on("connection", (socket) => {
   socket.on("send-message-from-frontend", async (msg) => {
+    if (!msg || !msg.remoteJid || typeof msg.message !== 'string') {
+        console.error("[IndexJS Socket] Mensaje inválido desde el frontend:", msg);
+        // Opcional: emitir un error de vuelta al cliente
+        // socket.emit('send-message-error', { message: 'Datos del mensaje inválidos', originalMsg: msg });
+        return;
+    }
     try {
       const response = await fetch('http://localhost:3000/send-message', {
         method: 'POST',
@@ -135,14 +162,20 @@ io.on("connection", (socket) => {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
+        let errorBody = '';
+        try {
+            errorBody = await response.text();
+        } catch (e) {
+            // Ignorar si no se puede leer el cuerpo del error
+        }
+        throw new Error(`HTTP error ${response.status} al enviar a Baileys: ${errorBody}`);
       }
-
-      // Handle success (e.g., update database, send confirmation to frontend)
-
+      // Opcional: Confirmar al frontend que el mensaje fue enviado a Baileys
+      // socket.emit('message-sent-to-baileys-ack', { success: true, originalMsg: msg });
     } catch (error) {
-      console.error('Error sending message to Baileys:', error);
-      // Handle error (e.g., send error message to frontend)
+      console.error('[IndexJS Socket] Error sending message to Baileys:', error);
+      // Opcional: Emitir un error de vuelta al cliente
+      // socket.emit('send-message-error', { message: error.message, originalMsg: msg });
     }
   });
 })

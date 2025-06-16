@@ -78,7 +78,7 @@ async function connectToWhatsApp () {
                     // --- Handle Quoted Messages ---
                     let quotedMsgInfo = null;
                     const contextInfo = message.message?.extendedTextMessage?.contextInfo || message.message?.imageMessage?.contextInfo || message.message?.contactMessage?.contextInfo || message.message?.contactsArrayMessage?.contextInfo || message.message?.locationMessage?.contextInfo || message.message?.audioMessage?.contextInfo;
-
+                    
                     if (message.message.imageMessage) {
                         try {
                             // Correctly call downloadMediaMessage as a standalone function
@@ -150,6 +150,51 @@ async function connectToWhatsApp () {
                                 pushName: message.pushName
                             };
                         }
+                    } else if (message.message.audioMessage) {
+                        try {
+                            const audioBuffer = await downloadMediaMessage(
+                                message,
+                                'buffer',
+                                {},
+                                {
+                                    logger: sock.logger,
+                                    reuploadRequest: sock.updateMediaMessage
+                                }
+                            );
+                            const base64Audio = audioBuffer.toString('base64');
+                            const audioMimeType = message.message.audioMessage.mimetype;
+                            const audioDataUrl = `data:${audioMimeType};base64,${base64Audio}`;
+
+                            messageData = {
+                                type: 'audio',
+                                key: message.key,
+                                content: audioDataUrl,
+                                mimetype: audioMimeType,
+                                duration: message.message.audioMessage.seconds,
+                                messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
+                                pushName: message.pushName
+                            };
+                        } catch (downloadError) {
+                            console.error('Error downloading audio:', downloadError);
+                            messageData = {
+                                type: 'text', // Fallback to text
+                                key: message.key,
+                                content: `[Audio received, but failed to load]`,
+                                messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
+                                pushName: message.pushName
+                            };
+                        }
+                    } else if (message.message.locationMessage) {
+                        messageData = {
+                            type: 'location',
+                            key: message.key,
+                            latitude: message.message.locationMessage.degreesLatitude,
+                            longitude: message.message.locationMessage.degreesLongitude,
+                            name: message.message.locationMessage.name || null,
+                            address: message.message.locationMessage.address || null,
+                            messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
+                            pushName: message.pushName
+                        };
                     } else if (message.message.conversation || (message.message.extendedTextMessage && message.message.extendedTextMessage.text)) {
                         const textMessage = message.message.conversation || message.message.extendedTextMessage.text;
                         messageData = {
@@ -183,7 +228,11 @@ async function connectToWhatsApp () {
                             quotedContent = `📷 ${contextInfo.quotedMessage.imageMessage.caption || 'Image'}`;
                         } else if (contextInfo.quotedMessage.imageMessage) {
                             quotedContent = `📷 Image`;
-                        } // Add more types as needed: video, audio, sticker etc.
+                        } else if (contextInfo.quotedMessage.audioMessage) {
+                            quotedContent = `🎵 Audio`;
+                        } else if (contextInfo.quotedMessage.locationMessage) {
+                            quotedContent = `📍 Ubicación`;
+                        }  // Add more types as needed: video, sticker etc.
 
                         messageData.quotedMessage = {
                             content: quotedContent,
