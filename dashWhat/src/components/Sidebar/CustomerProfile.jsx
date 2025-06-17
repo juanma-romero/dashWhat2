@@ -50,7 +50,7 @@ const CustomerProfile = ({ customer }) => {
 
   const saveChanges = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/customer-profile', {
+      const response = await fetch('https://backend-service-369596834111.us-central1.run.app/api/customer-profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

@@ -10,3 +10,4 @@ backend/utils/dbUtilsPush.js
 backend/services/ia-service/node_modules
 api/node_modules/
 backend/node_modules/
+memory-bank/

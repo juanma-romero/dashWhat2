@@ -61,7 +61,7 @@ const Sidebar = ({ selectedChat, products }) => {
     }    
     
     try {
-      const response = await fetch('http://localhost:5000/api/customer/newOrder', {
+      const response = await fetch('https://backend-service-369596834111.us-central1.run.app/api/customer/newOrder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +96,7 @@ const Sidebar = ({ selectedChat, products }) => {
         setCustomer({ firstName: '', lastName: '', Phone: '', RUC: '' }); // Initialize with empty object
         setOrderItems([{ id: uuidv4(), product: '', quantity: 1, price: 0 }]);
         
-        fetch(`http://localhost:5000/api/customer/${selectedChat}`)
+        fetch(`https://backend-service-369596834111.us-central1.run.app/api/customer/${selectedChat}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`); // Throw error for non-2xx responses
@@ -118,7 +118,7 @@ const Sidebar = ({ selectedChat, products }) => {
         setLastOrderError(null);
         setLastOrder(null);
 
-        fetch(`http://localhost:5000/api/last-order/${selectedChat}`)
+        fetch(`https://backend-service-369596834111.us-central1.run.app/api/last-order/${selectedChat}`)
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 404) {

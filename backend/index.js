@@ -21,22 +21,23 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true })); 
 
 // Declara Socket.io y Configurar CORS
+const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173', 
+    origin: frontendOrigin, 
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
     credentials: true 
   }
 })
 io.on("connection", (socket) => {
-  console.log('New client connected:', socket.id);
+  console.log('New client connected:', socket.id)
 })
 
 dotenv.config()
 
 // Variable para la colección
-let collection;
+let collection
 
 // Inicializar conexión a la base de datos
 async function initializeDatabase() {
@@ -53,7 +54,7 @@ initializeDatabase();
 
 // Middleware para manejar CORS en Express 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: frontendOrigin,
   methods: ['GET', 'POST', 'PUT'],
   allowedHeaders: ['Content-Type']
 }))
@@ -150,7 +151,8 @@ io.on("connection", (socket) => {
         return;
     }
     try {
-      const response = await fetch('http://localhost:3000/send-message', {
+      const baileysApiUrl = process.env.API_BAILEYS_URL || 'http://localhost:3000/send-message';
+      const response = await fetch(baileysApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,6 +182,7 @@ io.on("connection", (socket) => {
   });
 })
 
-server.listen(5000, () => {
-  console.log('Server is listening on port 5000')
+const port = process.env.PORT || 5000;
+server.listen(port, () => {
+  console.log(`Server is listening on port ${port}`)
 })

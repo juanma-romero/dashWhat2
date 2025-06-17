@@ -25,7 +25,7 @@ const App = () => {
   useEffect(() => {
     setProductsLoading(true);
     setProductsError(null);
-    fetch('http://localhost:5000/api/products')  // Fetch product data
+    fetch('https://backend-service-369596834111.us-central1.run.app/api/products')  // Fetch product data
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -45,7 +45,7 @@ const App = () => {
 
   // conecta socket.io y recibe mensajes desde baileys
   useEffect(() => {
-    socketRef.current = io('http://localhost:5000', { transports: ['websocket'] })    
+    socketRef.current = io('https://backend-service-369596834111.us-central1.run.app', { transports: ['websocket'] })
     socketRef.current.on('new-message', (newMessageData) => {  // newMessageData is the transformedMessage from backend
       //console.log('Received new message:', newMessageData)
       setChats((prevChats) => {
@@ -108,7 +108,7 @@ const App = () => {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/all-chats');
+        const response = await fetch('https://backend-service-369596834111.us-central1.run.app/api/all-chats');
         const data = await response.json()
         //console.log('Fetched chats:', data)
         setChats(data);
@@ -145,7 +145,7 @@ const App = () => {
   try {
     const chat = chats.find(chat => chat.remoteJid === remoteJid);
     if (chat && chat.stateConversation === 'No leido') {
-      await fetch(`http://localhost:5000/api/update-chat-state`, {
+      await fetch(`https://backend-service-369596834111.us-central1.run.app/api/update-chat-state`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

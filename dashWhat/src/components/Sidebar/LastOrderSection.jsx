@@ -70,7 +70,7 @@ const LastOrderSection = ({ lastOrder, lastOrderLoading, lastOrderError, product
 
   const handleSaveChanges = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/orders/update', {
+      const response = await fetch('https://backend-service-369596834111.us-central1.run.app/api/orders/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

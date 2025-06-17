@@ -9,8 +9,8 @@ const ListOrders = () => {
     const fetchOrdersAndProducts = async () => {
       try {
         const [ordersResponse, productsResponse] = await Promise.all([
-          fetch('http://localhost:5000/api/orders'),
-          fetch('http://localhost:5000/api/products')
+          fetch('https://backend-service-369596834111.us-central1.run.app/api/orders'),
+          fetch('https://backend-service-369596834111.us-central1.run.app/api/products')
         ]);
 
         if (!ordersResponse.ok || !productsResponse.ok) {
@@ -130,4 +130,3 @@ const ListOrders = () => {
   )
 }
 export default ListOrders
-

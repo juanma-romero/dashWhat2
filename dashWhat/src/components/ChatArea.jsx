@@ -14,7 +14,7 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
     const handleStateChange = async (newState) => {
                 
         try {
-          const response = await fetch('http://localhost:5000/api/state-conversation', {
+          const response = await fetch('https://backend-service-369596834111.us-central1.run.app/api/state-conversation', {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ const ChatArea = ({ selectedChat, messageText, handleMessageChange, handleSendMe
         if (selectedChat) {
             const fetchMessages = async () => { 
                 try {
-                    const response = await fetch(`http://localhost:5000/api/messages/${selectedChat}`);
+                    const response = await fetch(`https://backend-service-369596834111.us-central1.run.app/api/messages/${selectedChat}`);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`)
                     }
