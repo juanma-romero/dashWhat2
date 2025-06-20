@@ -1,10 +1,8 @@
 node_modules/**/
 baileys_auth_info/
-cosas.md
-.env
-mensaje.txt
 
-dashWhat2.code-workspace
+.env
+
 backend/utils/dbUtils.js
 backend/utils/dbUtilsPush.js
 backend/services/ia-service/node_modules
