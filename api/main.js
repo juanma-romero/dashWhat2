@@ -6,7 +6,6 @@ import QRCode from 'qrcode'
 const app = express()
 app.use(express.json())
 
-let qrCodeDataUrl = null; // Variable to store QR code data URL
 
 async function connectToWhatsApp () {
 
@@ -14,7 +13,7 @@ async function connectToWhatsApp () {
 
     const sock = makeWASocket({
         // can provide additional config here
-        printQRInTerminal: false, // Changed to false
+         
         auth: state                  
     })
 
@@ -27,8 +26,8 @@ async function connectToWhatsApp () {
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update
         if (qr) {
-            qrCodeDataUrl = await QRCode.toDataURL(qr);
-            console.log('QR code generated. Scan it at http://localhost:8080/qr');
+            // as an example, this prints the qr code to the terminal
+            console.log(await QRCode.toString(qr, {type:'terminal', small: true}))
         }
         if(connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut
@@ -59,12 +58,13 @@ async function connectToWhatsApp () {
                     if (
                         remoteJid.includes('@broadcast') ||
                         remoteJid.endsWith('@g.us') ||
-                        message.protocolMessage // Filter out protocol messages
+                        message.protocolMessage 
                     ) {
                         continue
                     }
 
                     // Helper function to parse vCard (basic version)
+                    /*
                     const parseVCard = (vcard) => {
                         const nameMatch = vcard.match(/FN:(.+)/);
                         const waidMatch = vcard.match(/TEL;waid=([^:]+):(.+)/);
@@ -74,8 +74,9 @@ async function connectToWhatsApp () {
                             fullNumber: waidMatch ? waidMatch[2].trim() : 'N/A',
                         };
                     };
-
+*/
                     // --- Handle Quoted Messages ---
+                    /*
                     let quotedMsgInfo = null;
                     const contextInfo = message.message?.extendedTextMessage?.contextInfo || message.message?.imageMessage?.contextInfo || message.message?.contactMessage?.contextInfo || message.message?.contactsArrayMessage?.contextInfo || message.message?.locationMessage?.contextInfo || message.message?.audioMessage?.contextInfo;
                     
@@ -216,8 +217,9 @@ async function connectToWhatsApp () {
                             pushName: message.pushName
                         }
                     }
-
+*/
                     // Add quoted message info if it exists and messageData has been formed
+                    /*
                     if (messageData && contextInfo && contextInfo.quotedMessage) {
                         let quotedContent = "[Non-text quoted message]";
                         if (contextInfo.quotedMessage.conversation) {
@@ -240,10 +242,11 @@ async function connectToWhatsApp () {
                             id: contextInfo.stanzaId // ID of the quoted message
                         };
                     }
-
+*/
                     // Send to backend only once after messageData is populated
                     if (messageData) {
-                        await axios.post('http://localhost:5000/api/messages', { message: messageData });
+                        //await axios.post('https://backend-service-369596834111.us-central1.run.app/api/messages', { message: messageData });
+                    await axios.post('http://localhost:3000/api/messages', { message: messageData });
                     }
                 }
             }
@@ -251,38 +254,8 @@ async function connectToWhatsApp () {
             console.error('Error processing message:', error);
         }
     })   
-
-    app.get('/qr', (req, res) => {
-        if (qrCodeDataUrl) {
-            res.send(`
-                <html>
-                    <head>
-                        <title>WhatsApp QR Code</title>
-                        <style>
-                            body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; }
-                            img { max-width: 100%; max-height: 100%; }
-                        </style>
-                    </head>
-                    <body>
-                        <img src="${qrCodeDataUrl}" alt="WhatsApp QR Code" />
-                    </body>
-                </html>
-            `);
-        } else {
-            res.status(404).send(`
-                <html>
-                    <head><title>QR Code Not Ready</title></head>
-                    <body>
-                        <h1>QR code is not available yet.</h1>
-                        <p>Please wait for the QR code to be generated and refresh this page.</p>
-                        <script>setTimeout(() => window.location.reload(), 5000);</script>
-                    </body>
-                </html>
-            `);
-        }
-    });
-
-    app.post('/send-message', async (req, res) => {
+    
+   /* app.post('/send-message', async (req, res) => {
         try {
           const { remoteJid, message } = req.body; // Extract ONLY remoteJid and message text
     
@@ -294,11 +267,11 @@ async function connectToWhatsApp () {
           console.error('Error sending message:', error);
           res.status(500).send('Error sending message');
         }
-    })
+    })*/
 }
 connectToWhatsApp()
 
-const port = 8080; // Changed port
+const port = 8080
 app.listen(port, () => {
-    console.log(`Baileys server listening on port ${port}. QR code will be available at http://localhost:${port}/qr`);
+    console.log(`Baileys server listening on port ${port}.`);
 })
