@@ -1,19 +1,14 @@
 import express from 'express' 
 import http from 'http'
-import dotenv from 'dotenv'
 import { connectToDatabase } from './utils/db.js';
+import { processOrderFromConversation } from './services/order-processing-service.js'
 
-// Importar el nuevo servicio de procesamiento de pedidos
-import { processOrderFromConversation } from './services/order-processing-service.js';
 const app = express()
 const server = http.createServer(app)
 
 // Increase the limit for JSON payloads
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true })); 
-
-
-dotenv.config()
 
 // Variable para la colección
 let collection
@@ -29,10 +24,11 @@ async function initializeDatabase() {
     process.exit(1); // Salir si la BD no se puede inicializar
   }
 }
-initializeDatabase()
+initializeDatabase();
+
 
 app.post('/api/messages', async (req, res) => {
-  const messageData = req.body.message
+  const messageData = req.body.message;
 
   if (!messageData || !messageData.key || !messageData.key.remoteJid || !messageData.key.id) {
     console.error("Datos del mensaje incompletos o inválidos recibidos:", messageData);
@@ -65,7 +61,7 @@ app.post('/api/messages', async (req, res) => {
       timestamp: messageData.messageTimestamp 
                ? new Date(messageData.messageTimestamp) 
                : new Date()
-  }
+    }
 
     // 2. Determinar el nuevo estado de la conversación
     // Usamos findOne para chequear el estado actual antes de la actualización.
@@ -88,16 +84,16 @@ app.post('/api/messages', async (req, res) => {
       contactJid: remoteJid,
       createdAt: new Date()
     }
-  };
-
-  // 4. AÑADIR CONDICIONALMENTE la actualización del contactName
+  }
+   
+    // 4. AÑADIR CONDICIONALMENTE la actualización del contactName
   // Solo si el mensaje es del usuario (`fromMe` es `false`)
   if (!messageData.key.fromMe) {
     updateOperation.$set.contactName = messageData.pushName;
-  }
+  }    
 
-  // 5. Ejecutar la operación de findOneAndUpdate con el objeto dinámico
-    const updatedConversation = await collection.findOneAndUpdate(
+   // 5. Ejecutar la operación de findOneAndUpdate con el objeto dinámico
+  const updatedConversation = await collection.findOneAndUpdate(
     { contactJid: remoteJid },
     updateOperation, // Usamos nuestro objeto construido dinámicamente
     { 
@@ -105,13 +101,15 @@ app.post('/api/messages', async (req, res) => {
       returnDocument: 'after'
     }
   )
-   
+
+    res.sendStatus(200);
 
   } catch (err) {
     console.error('Error procesando el mensaje en MongoDB:', err);
     res.status(500).send('Error al procesar el mensaje');
   }
-})
+});
+
 
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
