@@ -10,13 +10,18 @@ from typing import List, Optional # Importa List y Optional para mejor tipado
 import xmlrpc.client
 import ssl
 import certifi
+import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # --- Configuración de Odoo ---
-# Es una buena práctica mover esto a variables de entorno en el futuro
-URL = "https://voraz1.odoo.com"
-DB = "voraz1"
-USERNAME = "xjuanma.romerox@gmail.com"
-PASSWORD = "a99d280f2defd641636192efef2e1d353b2282be" # Considera usar una API Key de Odoo en lugar de tu contraseña
+URL = os.getenv("URL")
+DB = os.getenv("DB")
+USERNAME = os.getenv("USERNAME")
+PASSWORD = os.getenv("PASSWORD")
+
 
 # --- Inicialización de FastAPI ---
 app = FastAPI(
