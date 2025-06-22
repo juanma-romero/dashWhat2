@@ -101,15 +101,13 @@ app.post('/api/messages', async (req, res) => {
       returnDocument: 'after'
     }
   )
-
     res.sendStatus(200);
 
   } catch (err) {
     console.error('Error procesando el mensaje en MongoDB:', err);
     res.status(500).send('Error al procesar el mensaje');
   }
-});
-
+})
 
 const port = process.env.PORT || 3000;
 server.listen(port, () => {

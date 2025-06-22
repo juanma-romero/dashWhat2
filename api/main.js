@@ -6,22 +6,18 @@ import QRCode from 'qrcode'
 const app = express()
 app.use(express.json())
 
-
 async function connectToWhatsApp () {
 
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')   
 
     const sock = makeWASocket({
-        // can provide additional config here
-         
+        // can provide additional config here         
         auth: state                  
     })
 
     // maneja las credenciales
-
-    sock.ev.on('creds.update', saveCreds)         
+    sock.ev.on('creds.update', saveCreds) 
     
-
     // maneja la coneccion de baileys
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update
@@ -41,11 +37,8 @@ async function connectToWhatsApp () {
         }
     })    
     
-    
     sock.ev.on('messages.upsert', async m => { 
         console.log(JSON.stringify(m, undefined, 2))
-        // Import downloadMediaMessage if it's a separate utility, though usually it's on sock
-        // const { downloadMediaMessage } = await import('@whiskeysockets/baileys'); // Or however it's imported if not on sock
 
         try {
             const messages = m.messages;
@@ -59,6 +52,7 @@ async function connectToWhatsApp () {
                         remoteJid.includes('@broadcast') ||
                         remoteJid.endsWith('@g.us') ||
                         message.protocolMessage 
+                        // *** filtrar los mensajes de Zulma, proveedores y delivery? ***
                     ) {
                         continue
                     }      
@@ -96,21 +90,7 @@ async function connectToWhatsApp () {
         } catch (error) {
             console.error('Error processing message:', error);
         }
-    })   
-    
-   /* app.post('/send-message', async (req, res) => {
-        try {
-          const { remoteJid, message } = req.body; // Extract ONLY remoteJid and message text
-    
-          // Use Baileys to send the message.  The timestamp will be handled by Baileys.
-          await sock.sendMessage(remoteJid, { text: message }); 
-    
-          res.status(200).send('Message sent successfully');
-        } catch (error) {
-          console.error('Error sending message:', error);
-          res.status(500).send('Error sending message');
-        }
-    })*/
+    })    
 }
 connectToWhatsApp()
 

@@ -2,10 +2,24 @@ node_modules/**/
 baileys_auth_info/
 
 .env
+.venv/**/ 
 
 backend/utils/dbUtils.js
 backend/utils/dbUtilsPush.js
 backend/services/ia-service/node_modules
 api/node_modules/
 backend/node_modules/
+backend/services/odoo-service/.venv/**/
+backend/services/odoo-service/.venv
 memory-bank/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
