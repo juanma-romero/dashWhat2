@@ -67,7 +67,7 @@
 
             try {
                 // Llamada a tu API de FastAPI
-                const response = await fetch('http://localhost:8000/pedidos/pendientes/');
+                const response = await fetch('http://127.0.0.1:8000/pedidos/pendientes/');
 
                 if (!response.ok) {
                     throw new Error(`No se pudo conectar a la API. Código: ${response.status}`);
@@ -90,7 +90,7 @@
             } catch (error) {
                 // Manejo de errores de conexión
                 loadingIndicator.classList.add('hidden');
-                errorText.textContent = `No se pudo obtener la información. Asegúrate de que el servidor de FastAPI esté corriendo en http://localhost:5001 y que Odoo sea accesible. Detalle: ${error.message}`;
+                errorText.textContent = `No se pudo obtener la información. Asegúrate de que el servidor de FastAPI esté corriendo en http://localhost:8000 y que Odoo sea accesible. Detalle: ${error.message}`;
                 errorMessage.classList.remove('hidden');
             }
         }
