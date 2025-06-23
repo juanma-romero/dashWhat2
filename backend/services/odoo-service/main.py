@@ -3,25 +3,26 @@
 # 1. pip install fastapi "uvicorn[standard]" certifi
 # 2. uvicorn main:app --reload
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional # Importa List y Optional para mejor tipado
+from fastapi import FastAPI, HTTPException # type: ignore
+from fastapi.middleware.cors import CORSMiddleware # type: ignore
+from pydantic import BaseModel # type: ignore
+from typing import List, Optional 
+from datetime import datetime, timezone 
 
 import xmlrpc.client
 import ssl
-import certifi
+import certifi # type: ignore
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv # type: ignore
 
 # Cargar variables de entorno desde .env
-load_dotenv()
+load_dotenv(override=True)
 
 # --- Configuración de Odoo ---
 URL = os.getenv("URL")
 DB = os.getenv("DB")
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
-
 
 # --- Inicialización de FastAPI ---
 app = FastAPI(
@@ -30,9 +31,29 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# --- 2. CONFIGURAR EL MIDDLEWARE DE CORS ---
+# Esto le dice al navegador que permita las peticiones desde otros orígenes.
+# Para desarrollo, ["*"] (permitir todo) es aceptable.
+# Para producción, deberías especificar los orígenes (ej: ["https://iguazu.guru"])
+origins = [
+    "http://localhost",
+    "http://localhost:8080", # El puerto donde serviremos el HTML
+    "http://127.0.0.1:8080",
+    "http://0.0.0.0:8080",
+    "http://0.0.0.0:8080/pedidos.html",
+    "null", # Permitir peticiones de archivos locales (solución rápida)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, # Lista de orígenes permitidos
+    allow_credentials=True,
+    allow_methods=["*"], # Permitir todos los métodos (GET, POST, etc.)
+    allow_headers=["*"], # Permitir todos los headers
+)
+
 # --- Modelos de Datos (Pydantic) ---
 # FastAPI usa esto para validar los datos de entrada automáticamente.
-# ¡Es una de sus mejores características!
 class Producto(BaseModel):
     id: int
     cantidad: float
@@ -79,34 +100,59 @@ def read_root():
     return {"mensaje": "El servicio de integración con Odoo para Voraz está activo."}
 
 
-@app.get("/pedidos/pendientes/", summary="Listar Pedidos de Venta Pendientes")
+@app.get("/pedidos/pendientes/", summary="Listar Pedidos Pendientes de Entrega")
 async def listar_pedidos_pendientes(limite: int = 10):
     """
-    Obtiene una lista de las últimas órdenes de venta que están en estado 'sale'
-    (confirmadas pero no marcadas como 'done'). Estos son tus pedidos pendientes.
+    Obtiene una lista de las órdenes de venta que están confirmadas ('sale')
+    y cuya fecha de entrega ('commitment_date') es en el futuro.
+    Incluye el detalle de los productos de cada pedido.
     """
-    print(f"Recibida petición para listar los últimos {limite} pedidos pendientes.")
+    print(f"Recibida petición para listar los últimos {limite} pedidos pendientes por entregar.")
     try:
         models, uid = get_odoo_models()
-
-        # Dominio de búsqueda: pedidos en estado 'sale' (Orden de Venta).
-        sale_order_domain = [['state', '=', 'sale']]
         
-        # Campos que queremos obtener de Odoo
+        # Obtiene la fecha y hora actual en formato UTC para la comparación
+        ahora = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Dominio de búsqueda:
+        # 1. El pedido debe estar confirmado ('state' = 'sale').
+        # 2. La fecha de entrega prometida debe ser mayor o igual a ahora.
+        sale_order_domain = [
+            '&',
+            ['state', '=', 'sale'],
+            ['commitment_date', '>=', ahora]
+        ]
+        
+        # Campos que queremos obtener de Odoo. Añadimos 'order_line' para obtener los IDs del detalle.
         sale_order_fields = [
             'name', 'partner_id', 'date_order', 'commitment_date', 
-            'amount_total', 'state'
+            'amount_total', 'state', 'order_line'
         ]
 
-        # Buscamos los pedidos en Odoo
+        # Buscamos los pedidos en Odoo, ordenados por la fecha de entrega más próxima primero
         orders_data = models.execute_kw(DB, uid, PASSWORD,
             'sale.order', 'search_read',
             [sale_order_domain],
-            {'fields': sale_order_fields, 'limit': limite, 'order': 'date_order DESC'}
+            {'fields': sale_order_fields, 'limit': limite, 'order': 'commitment_date ASC'}
         )
 
         if orders_data:
-            print(f"Se encontraron {len(orders_data)} pedidos pendientes.")
+            # Ahora, para cada pedido, buscamos el detalle de sus líneas
+            for order in orders_data:
+                order_line_ids = order.get('order_line', [])
+                if order_line_ids:
+                    line_fields = ['product_id', 'name', 'product_uom_qty']
+                    lines_data = models.execute_kw(DB, uid, PASSWORD,
+                        'sale.order.line', 'read',
+                        [order_line_ids],
+                        {'fields': line_fields}
+                    )
+                    # Añadimos el detalle al diccionario del pedido
+                    order['detalle_productos'] = lines_data
+                else:
+                    order['detalle_productos'] = []
+
+            print(f"Se encontraron {len(orders_data)} pedidos pendientes de entrega con su detalle.")
             return {
                 "status": "exito",
                 "cantidad": len(orders_data),
@@ -117,7 +163,7 @@ async def listar_pedidos_pendientes(limite: int = 10):
                 "status": "exito",
                 "cantidad": 0,
                 "pedidos": [],
-                "mensaje": "No se encontraron pedidos pendientes."
+                "mensaje": "No se encontraron pedidos pendientes de entrega."
             }
             
     except xmlrpc.client.Fault as e:
