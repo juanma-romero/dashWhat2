@@ -1,19 +1,18 @@
-import express from 'express' 
+import express from 'express'
 import http from 'http'
-import { connectToDatabase } from './utils/db.js';
+import { connectToDatabase } from './db.js';
 import { processOrderFromConversation } from './services/order-processing-service.js'
 
 const app = express()
 const server = http.createServer(app)
 
 // Increase the limit for JSON payloads
-app.use(express.json({ limit: '50mb' })); 
-app.use(express.urlencoded({ limit: '50mb', extended: true })); 
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Variable para la colección
 let collection
 
-// Inicializar conexión a la base de datos
+// Inicializar conexión a la base de datos 
 async function initializeDatabase() {
   try {
     const { db } = await connectToDatabase();
@@ -21,50 +20,44 @@ async function initializeDatabase() {
     console.log("Conexión a la base de datos y colección 'chatsV2' inicializada.");
   } catch (error) {
     console.error('Error initializing database:', error);
-    process.exit(1); // Salir si la BD no se puede inicializar
+    process.exit(1);
   }
 }
 initializeDatabase();
-
 
 app.post('/api/messages', async (req, res) => {
   const messageData = req.body.message;
 
   if (!messageData || !messageData.key || !messageData.key.remoteJid || !messageData.key.id) {
-    console.error("Datos del mensaje incompletos o inválidos recibidos:", messageData);
-    return res.status(400).send('Datos del mensaje incompletos o inválidos.');
+    console.error("Datos del mensaje incompletos o inválidos recibidos en /api/messages:", messageData);
+    return res.status(400).send('Datos del mensaje incompletos o inválidos para /api/messages.');
   }
 
-  // Si el mensaje es la clave, el procesamiento del pedido con Gemini se inicia en segundo plano
-  // Esta lógica no necesita cambiar.
   if (messageData.content && messageData.content.toLowerCase() === 'te tomo el pedido') {
-    console.log(`[IndexJS] Mensaje clave 'te tomo el pedido' detectado para ${messageData.key.remoteJid}.`);
+    console.log(`[IndexJS - /api/messages] Mensaje clave 'te tomo el pedido' detectado para ${messageData.key.remoteJid}.`);
     processOrderFromConversation(messageData.key.remoteJid, collection)
       .catch(err => {
-        console.error("[IndexJS] Error en el procesamiento de pedido en segundo plano:", err);
+        console.error("[IndexJS - /api/messages] Error en el procesamiento de pedido en segundo plano:", err);
       });
   }
 
   try {
     const remoteJid = messageData.key.remoteJid;
 
-    // 1. Formatear el mensaje para que coincida con nuestro nuevo esquema de array
     const formattedMessage = {
       id: messageData.key.id,
       role: messageData.key.fromMe ? 'assistant' : 'user',
       type: messageData.type,
-      content: messageData.content || null, // Asegurar que sea null si no existe
+      content: messageData.content || null,
       caption: messageData.caption || null,
-      mediaUrl: messageData.mediaUrl || null, // Si ya tienes lógica para subir media
+      mediaUrl: messageData.mediaUrl || null,
       contactInfo: messageData.contactInfo || null,
       quotedMessage: messageData.quotedMessage || null,
-      timestamp: messageData.messageTimestamp 
-               ? new Date(messageData.messageTimestamp) 
+      timestamp: messageData.messageTimestamp
+               ? new Date(messageData.messageTimestamp)
                : new Date()
     }
 
-    // 2. Determinar el nuevo estado de la conversación
-    // Usamos findOne para chequear el estado actual antes de la actualización.
     const currentChat = await collection.findOne({ contactJid: remoteJid });
     let updatedStateConversation = 'No leido';
     if (currentChat && currentChat.stateConversation === 'Resuelto') {
@@ -72,41 +65,55 @@ app.post('/api/messages', async (req, res) => {
     } else if (currentChat) {
       updatedStateConversation = currentChat.stateConversation;
     }
-    
-    // 3. Construir el objeto de actualización de forma dinámica
-  const updateOperation = {
-    $push: { messages: formattedMessage },
-    $set: {
-      stateConversation: updatedStateConversation,
-      updatedAt: new Date()
-    },
-    $setOnInsert: {
-      contactJid: remoteJid,
-      createdAt: new Date()
-    }
-  }
-   
-    // 4. AÑADIR CONDICIONALMENTE la actualización del contactName
-  // Solo si el mensaje es del usuario (`fromMe` es `false`)
-  if (!messageData.key.fromMe) {
-    updateOperation.$set.contactName = messageData.pushName;
-  }    
 
-   // 5. Ejecutar la operación de findOneAndUpdate con el objeto dinámico
-  const updatedConversation = await collection.findOneAndUpdate(
-    { contactJid: remoteJid },
-    updateOperation, // Usamos nuestro objeto construido dinámicamente
-    { 
-      upsert: true,
-      returnDocument: 'after'
+    const updateOperation = {
+      $push: { messages: formattedMessage },
+      $set: {
+        stateConversation: updatedStateConversation,
+        updatedAt: new Date()
+      },
+      $setOnInsert: {
+        contactJid: remoteJid,
+        createdAt: new Date()
+      }
     }
-  )
+
+    if (!messageData.key.fromMe) {
+      updateOperation.$set.contactName = messageData.pushName;
+    }
+
+    await collection.findOneAndUpdate(
+      { contactJid: remoteJid },
+      updateOperation,
+      {
+        upsert: true,
+        returnDocument: 'after'
+      }
+    )
     res.sendStatus(200);
 
   } catch (err) {
-    console.error('Error procesando el mensaje en MongoDB:', err);
-    res.status(500).send('Error al procesar el mensaje');
+    console.error('Error procesando el mensaje en MongoDB para /api/messages:', err);
+    res.status(500).send('Error al procesar el mensaje en /api/messages');
   }
+})
+
+// *** NUEVO ENDPOINT PARA MENSAJES DE WHATSAPP DESDE 'fresca' (SIMPLIFICADO) ***
+app.post('/whatsapp-inbound', (req, res) => {
+  const { contact, message } = req.body;
+
+  // 1. Imprimir el mensaje en la terminal
+  console.log('[VORAZ-MAIN - WHATSAPP INBOUND] Mensaje recibido de Fresca:');
+  console.log('Contacto:', contact ? contact.profile?.name : 'Desconocido', `(${contact?.wa_id})`);
+  console.log('Mensaje:', message ? message.text?.body : 'No es mensaje de texto o cuerpo vacío');
+  console.log('Detalles completos:', JSON.stringify(req.body, null, 2));
+
+  // 2. Construir la respuesta (simplemente un eco del mensaje recibido)
+  const incomingMessageText = message?.text?.body || 'Mensaje no textual o vacío';
+  const replyMessage = `VORAZ-MAIN ACK: Recibí tu mensaje: "${incomingMessageText}"`;
+
+  // 3. Devolver la respuesta a 'fresca'
+  res.json({ reply: replyMessage });
 })
 
 const port = process.env.PORT || 3000;
