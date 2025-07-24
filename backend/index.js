@@ -1,7 +1,6 @@
 import express from 'express'
 import http from 'http'
 import { connectToDatabase } from './db.js';
-import { processOrderFromConversation } from './services/order-processing-service.js'
 
 const app = express()
 const server = http.createServer(app)
@@ -35,10 +34,7 @@ app.post('/api/messages', async (req, res) => {
 
   if (messageData.content && messageData.content.toLowerCase() === 'te tomo el pedido') {
     console.log(`[IndexJS - /api/messages] Mensaje clave 'te tomo el pedido' detectado para ${messageData.key.remoteJid}.`);
-    processOrderFromConversation(messageData.key.remoteJid, collection)
-      .catch(err => {
-        console.error("[IndexJS - /api/messages] Error en el procesamiento de pedido en segundo plano:", err);
-      });
+    
   }
 
   try {
