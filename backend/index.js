@@ -95,7 +95,7 @@ app.post('/api/messages', async (req, res) => {
 })
 
 // *** NUEVO ENDPOINT PARA MENSAJES DE WHATSAPP DESDE 'fresca' (SIMPLIFICADO) ***
-app.post('/whatsapp-inbound', (req, res) => {
+app.post('/api/whatsapp-inbound', (req, res) => {
   const { contact, message } = req.body;
 
   // 1. Imprimir el mensaje en la terminal
