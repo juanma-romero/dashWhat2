@@ -96,20 +96,16 @@ app.post('/api/messages', async (req, res) => {
 
 // *** NUEVO ENDPOINT PARA MENSAJES DE WHATSAPP DESDE 'fresca' (SIMPLIFICADO) ***
 app.post('/api/whatsapp-inbound', (req, res) => {
-  const { contact, message } = req.body;
+  const { wa_id, message } = req.body;
 
   // 1. Imprimir el mensaje en la terminal
   console.log('[VORAZ-MAIN - WHATSAPP INBOUND] Mensaje recibido de Fresca:');
-  console.log('Contacto:', contact ? contact.profile?.name : 'Desconocido', `(${contact?.wa_id})`);
-  console.log('Mensaje:', message ? message.text?.body : 'No es mensaje de texto o cuerpo vacío');
-  console.log('Detalles completos:', JSON.stringify(req.body, null, 2));
+  console.log(`De: ${wa_id}`);
+  console.log(`Mensaje: ${message}`);
 
-  // 2. Construir la respuesta (simplemente un eco del mensaje recibido)
-  const incomingMessageText = message?.text?.body || 'Mensaje no textual o vacío';
-  const replyMessage = `VORAZ-MAIN ACK: Recibí tu mensaje: "${incomingMessageText}"`;
-
+ 
   // 3. Devolver la respuesta a 'fresca'
-  res.json({ reply: replyMessage });
+  res.json(null);
 })
 
 const port = process.env.PORT || 3000;
