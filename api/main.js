@@ -89,7 +89,7 @@ async function connectToWhatsApp () {
                     // Send to backend only once after messageData is populated
                     if (messageData) {
                         //await axios.post('https://backend-service-369596834111.us-central1.run.app/api/messages', { message: messageData });
-                    await axios.post('http://localhost:3000/api/messages', { message: messageData });
+                    await axios.post('http://34.44.100.213:3000/api/messages', { message: messageData });
                     }
                 }
             }
