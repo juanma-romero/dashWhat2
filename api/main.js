@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { makeWASocket, DisconnectReason, useMultiFileAuthState, downloadMediaMessage } from '@whiskeysockets/baileys'
 import { v2 as cloudinary } from 'cloudinary'
-import FormData from 'form-data' // <--- Nueva dependencia
+import FormData from 'form-data' 
 import axios from 'axios'
 import express from 'express'
 import QRCode from 'qrcode'
