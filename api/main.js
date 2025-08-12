@@ -1,4 +1,4 @@
-import 'dotenv/config' // Importante: debe ir primero para cargar las variables de entorno
+import 'dotenv/config' 
 import {makeWASocket, DisconnectReason, useMultiFileAuthState, downloadMediaMessage } from '@whiskeysockets/baileys'
 import { v2 as cloudinary } from 'cloudinary'
 import axios from 'axios'
@@ -76,12 +76,20 @@ async function connectToWhatsApp () {
                     messageData = { type: 'text', content: messageContent.conversation || messageContent.extendedTextMessage.text };
                 
                 } else if (messageContent.imageMessage) {
+                    if (message.key.fromMe) {
+                        console.log('Imagen propia ignorada.');
+                        continue;
+                    }
                     console.log('Recibida imagen. Descargando y subiendo a Cloudinary...');
                     const imageBuffer = await downloadMediaMessage(message, 'buffer', {});
                     const mediaUrl = await uploadMediaToCloudinary(imageBuffer);
                     messageData = { type: 'image', mediaUrl: mediaUrl, caption: messageContent.imageMessage.caption || null };
                 
-                } else if (messageContent.audioMessage) { // NUEVA SECCIÓN PARA AUDIO
+                } else if (messageContent.audioMessage) { 
+                    if (message.key.fromMe) {
+                        console.log('Audio propio ignorado.');
+                        continue;
+                    }
                     console.log('Recibido audio. Descargando y subiendo a Cloudinary...');
                     const audioBuffer = await downloadMediaMessage(message, 'buffer', {});
                     const mediaUrl = await uploadMediaToCloudinary(audioBuffer);
