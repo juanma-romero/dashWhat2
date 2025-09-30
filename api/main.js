@@ -20,6 +20,9 @@ app.use(express.json())
 
 const phonesToFilter = JSON.parse(fs.readFileSync('./phones.json', 'utf-8')).phones;
 
+// Variable global para almacenar la conexión de Baileys
+let sock = null;
+
 // --- Nueva Función para Subir Medios a Cloudinary ---
 // Esta función toma un buffer (imagen, audio, etc.) y lo sube.
 async function uploadMediaToCloudinary(buffer) {
@@ -40,7 +43,7 @@ async function uploadMediaToCloudinary(buffer) {
 
 async function connectToWhatsApp () {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')   
-    const sock = makeWASocket({ auth: state })
+    sock = makeWASocket({ auth: state })
 
     sock.ev.on('creds.update', saveCreds)    
     sock.ev.on('connection.update', async (update) => {
@@ -97,7 +100,7 @@ async function connectToWhatsApp () {
 
                 } else if (messageContent.locationMessage) {
                     const location = messageContent.locationMessage;
-                    messageData = { type: 'location', content: { latitude: location.degreesLatitude, longitude: location.degreesLongitude, name: location.name || null, address: location.address || null } };
+                    messageData = { type: 'location', content: { latitude: location.degreesLatitude, longitude: location.degreesLongitude, name: location.name || null, address: location.address || null }}
                 
                 } else if (messageContent.contactMessage) {
                     const contact = messageContent.contactMessage;
@@ -156,7 +159,7 @@ async function connectToWhatsApp () {
         } catch (error) {
             console.error('Error procesando el mensaje:', error);
         }
-    })     
+    })
 }
 
 connectToWhatsApp()
@@ -168,6 +171,12 @@ app.post('/send-message', async (req, res) => {
 
         if (!jid || !message) {
             return res.status(400).json({ error: 'Faltan parámetros: jid y message son requeridos' });
+        }
+
+        // Verificar que sock esté disponible
+        if (!sock) {
+            console.error('[main.js] sock no está disponible');
+            return res.status(500).json({ error: 'Conexión de WhatsApp no disponible' });
         }
 
         console.log(`[main.js] Enviando respuesta a ${jid}: ${message.substring(0, 50)}...`);
