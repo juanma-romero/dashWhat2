@@ -137,7 +137,19 @@ async function connectToWhatsApp () {
                         pushName: message.pushName
                     };
 
-                    await axios.post('http://34.44.100.213:3000/api/messages', { message: fullMessagePayload });
+                    const response = await axios.post('http://34.44.100.213:3000/api/messages', { message: fullMessagePayload });
+
+                    // Si el backend devuelve una respuesta (para comandos de administradores)
+                    if (response.data && response.data.reply) {
+                        console.log(`[main.js] El backend devolvió una respuesta, enviándola a ${response.data.targetJid}`);
+
+                        // Enviar la respuesta usando nuestro propio endpoint
+                        await axios.post('http://localhost:8080/send-message', {
+                            jid: response.data.targetJid,
+                            message: response.data.reply
+                        });
+                    }
+
                     console.log(`Mensaje de tipo '${fullMessagePayload.type}' ${fullMessagePayload.quotedMessage ? '(con respuesta)' : ''} enviado al backend.`);
                 }
             }
@@ -148,6 +160,28 @@ async function connectToWhatsApp () {
 }
 
 connectToWhatsApp()
+
+// Endpoint para recibir respuestas del backend y enviarlas a WhatsApp
+app.post('/send-message', async (req, res) => {
+    try {
+        const { jid, message } = req.body;
+
+        if (!jid || !message) {
+            return res.status(400).json({ error: 'Faltan parámetros: jid y message son requeridos' });
+        }
+
+        console.log(`[main.js] Enviando respuesta a ${jid}: ${message.substring(0, 50)}...`);
+
+        await sock.sendMessage(jid, { text: message });
+
+        console.log(`[main.js] Respuesta enviada exitosamente a ${jid}`);
+        res.json({ success: true, message: 'Mensaje enviado exitosamente' });
+
+    } catch (error) {
+        console.error('[main.js] Error enviando respuesta:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
 
 const port = 8080
 app.listen(port, () => {
