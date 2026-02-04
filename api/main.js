@@ -155,6 +155,7 @@ async function connectToWhatsApp () {
 
                     console.log(`Mensaje de tipo '${fullMessagePayload.type}' ${fullMessagePayload.quotedMessage ? '(con respuesta)' : ''} enviado al backend.`);
                 }
+
             }
         } catch (error) {
             console.error('Error procesando el mensaje:', error);
@@ -192,7 +193,7 @@ app.post('/send-message', async (req, res) => {
     }
 });
 
-const port = 8080
+const port = 8880
 app.listen(port, () => {
     console.log(`Servidor Baileys escuchando en el puerto ${port}.`);
 })
