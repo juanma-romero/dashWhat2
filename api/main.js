@@ -23,7 +23,7 @@ const phonesToFilter = JSON.parse(fs.readFileSync('./phones.json', 'utf-8')).pho
 // Variable global para almacenar la conexión de Baileys
 let sock = null;
 
-// --- Nueva Función para Subir Medios a Cloudinary ---
+// --- Función para Subir Medios a Cloudinary ---
 // Esta función toma un buffer (imagen, audio, etc.) y lo sube.
 async function uploadMediaToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
