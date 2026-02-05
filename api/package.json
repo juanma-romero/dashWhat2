@@ -9,6 +9,7 @@
   "dependencies": {
     "@whiskeysockets/baileys": "*",
     "axios": "*",
+    "cloudinary": "*",
     "dotenv": "17.2.3",
     "express": "*",
     "qrcode": "*",
