@@ -140,14 +140,14 @@ async function connectToWhatsApp () {
                         pushName: message.pushName
                     };
 
-                    const response = await axios.post('http://34.44.100.213:3000/api/messages', { message: fullMessagePayload });
+                    const response = await axios.post(process.env.BACKEND_URL, { message: fullMessagePayload });
 
                     // Si el backend devuelve una respuesta (para comandos de administradores)
                     if (response.data && response.data.reply) {
                         console.log(`[main.js] El backend devolvió una respuesta, enviándola a ${response.data.targetJid}`);
 
                         // Enviar la respuesta usando nuestro propio endpoint
-                        await axios.post('http://localhost:8080/send-message', {
+                        await axios.post('http://localhost:8880/send-message', {
                             jid: response.data.targetJid,
                             message: response.data.reply
                         });
