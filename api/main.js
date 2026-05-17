@@ -69,7 +69,7 @@ async function connectToWhatsApp () {
                 if (!message.key || !message.message || message.key.remoteJid.includes('@newsletter') ||message.key.remoteJid.includes('@broadcast') || message.key.remoteJid.endsWith('@g.us') || message.protocolMessage || phonesToFilter.includes(message.key.remoteJid)) {
                     continue;
                 }
-
+                //console.log(message)
                 const messageContent = message.message;
                 let messageData = null;
 
@@ -140,7 +140,7 @@ async function connectToWhatsApp () {
                         pushName: message.pushName
                     };
 
-                    const response = await axios.post(process.env.BACKEND_URL, { message: fullMessagePayload });
+                    const response = await axios.post(`${process.env.BACKEND_URL}/api/messages`, { message: fullMessagePayload });
 
                     // Si el backend devuelve una respuesta (para comandos de administradores)
                     if (response.data && response.data.reply) {

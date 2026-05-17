@@ -10,7 +10,7 @@
     "@whiskeysockets/baileys": "*",
     "axios": "*",
     "cloudinary": "*",
-    "dotenv": "17.2.3",
+    "dotenv": "^17.2.3",
     "express": "*",
     "qrcode": "*",
     "qrcode-terminal": "*",
