@@ -1,5 +1,5 @@
 import 'dotenv/config' 
-import {makeWASocket, DisconnectReason, useMultiFileAuthState, downloadMediaMessage } from '@whiskeysockets/baileys'
+import {makeWASocket, DisconnectReason, useMultiFileAuthState, downloadMediaMessage, fetchLatestWaWebVersion } from '@whiskeysockets/baileys'
 import { v2 as cloudinary } from 'cloudinary'
 import axios from 'axios'
 import express from 'express'
@@ -49,7 +49,20 @@ async function uploadMediaToCloudinary(buffer) {
 
 async function connectToWhatsApp () {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')   
-    sock = makeWASocket({ auth: state })
+
+    let version;
+    try {
+        const waVersion = await fetchLatestWaWebVersion();
+        version = waVersion?.version;
+        console.log(`[main.js] Conectando con versión de WhatsApp Web: ${version?.join('.')}`);
+    } catch (vErr) {
+        console.warn('[main.js] No se pudo obtener la versión de WhatsApp Web, usando default:', vErr.message);
+    }
+
+    sock = makeWASocket({ 
+        ...(version ? { version } : {}),
+        auth: state 
+    })
 
     sock.ev.on('creds.update', saveCreds)    
     sock.ev.on('connection.update', async (update) => {
