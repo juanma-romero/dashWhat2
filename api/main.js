@@ -5,6 +5,7 @@ import axios from 'axios'
 import express from 'express'
 import QRCode from 'qrcode'
 import fs from 'fs'
+import { shouldIgnoreMessage, parseBaileysMessage } from './messageParser.js'
 
 // --- Configuración de Cloudinary ---
 // Lee las credenciales de forma segura desde el archivo .env
@@ -19,6 +20,11 @@ const app = express()
 app.use(express.json())
 
 const phonesToFilter = JSON.parse(fs.readFileSync('./phones.json', 'utf-8')).phones;
+
+const getBackendMessagesUrl = () => {
+    const raw = process.env.BACKEND_URL || 'http://backend:3000/api/messages';
+    return raw.endsWith('/api/messages') ? raw : `${raw.replace(/\/+$/, '')}/api/messages`;
+};
 
 // Variable global para almacenar la conexión de Baileys
 let sock = null;
@@ -66,81 +72,18 @@ async function connectToWhatsApp () {
     sock.ev.on('messages.upsert', async m => { 
         try {
             for (const message of m.messages) {
-                if (!message.key || !message.message || message.key.remoteJid.includes('@newsletter') ||message.key.remoteJid.includes('@broadcast') || message.key.remoteJid.endsWith('@g.us') || message.protocolMessage || phonesToFilter.includes(message.key.remoteJid)) {
+                if (shouldIgnoreMessage(message, phonesToFilter)) {
                     continue;
                 }
-                //console.log(message)
-                const messageContent = message.message;
-                let messageData = null;
 
-                // --- Lógica principal de procesamiento de mensajes ---
-
-                if (messageContent.conversation || messageContent.extendedTextMessage) {
-                    messageData = { type: 'text', content: messageContent.conversation || messageContent.extendedTextMessage.text };
-                
-                } else if (messageContent.imageMessage) {
-                    if (message.key.fromMe) {
-                        console.log('Imagen propia ignorada.');
-                        continue;
-                    }
-                    console.log('Recibida imagen. Descargando y subiendo a Cloudinary...');
-                    const imageBuffer = await downloadMediaMessage(message, 'buffer', {});
-                    const mediaUrl = await uploadMediaToCloudinary(imageBuffer);
-                    messageData = { type: 'image', mediaUrl: mediaUrl, caption: messageContent.imageMessage.caption || null };
-                
-                } else if (messageContent.audioMessage) { 
-                    if (message.key.fromMe) {
-                        console.log('Audio propio ignorado.');
-                        continue;
-                    }
-                    console.log('Recibido audio. Descargando y subiendo a Cloudinary...');
-                    const audioBuffer = await downloadMediaMessage(message, 'buffer', {});
-                    const mediaUrl = await uploadMediaToCloudinary(audioBuffer);
-                    messageData = { type: 'audio', mediaUrl: mediaUrl };
-
-                } else if (messageContent.locationMessage) {
-                    const location = messageContent.locationMessage;
-                    messageData = { type: 'location', content: { latitude: location.degreesLatitude, longitude: location.degreesLongitude, name: location.name || null, address: location.address || null }}
-                
-                } else if (messageContent.contactMessage) {
-                    const contact = messageContent.contactMessage;
-                    messageData = { type: 'contact', contactInfo: { displayName: contact.displayName, vcard: contact.vcard } };
-                
-                } else if (messageContent.videoMessage) {
-                    console.log('Mensaje de video ignorado.');
-                    continue; 
-                
-                } else {
-                    const unhandledType = Object.keys(messageContent)[0];
-                    messageData = { type: 'unsupported', content: `[Tipo de mensaje no soportado: ${unhandledType}]` };
-                }
-                
-                // Comprobar si es una respuesta (quote)
-                const contextInfo = messageContent.extendedTextMessage?.contextInfo || messageContent.contextInfo;
-                if (contextInfo?.quotedMessage && messageData) {
-                    const quoted = contextInfo.quotedMessage;
-                    let quotedContent = '';
-
-                    if (quoted.conversation) { quotedContent = quoted.conversation; } 
-                    else if (quoted.extendedTextMessage) { quotedContent = quoted.extendedTextMessage.text; } 
-                    else if (quoted.imageMessage) { quotedContent = quoted.imageMessage.caption || '[Imagen]'; } 
-                    else if (quoted.locationMessage) { quotedContent = quoted.locationMessage.name || '[Ubicación]'; }
-                    else if (quoted.audioMessage) { quotedContent = '[Audio]'; } 
-                    else { quotedContent = '[Mensaje no soportado]'; }
-                    
-                    messageData.quotedMessage = { id: contextInfo.stanzaId, senderJid: contextInfo.participant, content: quotedContent };
-                }
+                const fullMessagePayload = await parseBaileysMessage(message, {
+                    downloadMedia: (msg) => downloadMediaMessage(msg, 'buffer', {}),
+                    uploadMedia: uploadMediaToCloudinary
+                });
 
                 // Enviar al backend si hay datos
-                if (messageData) {
-                    const fullMessagePayload = {
-                        ...messageData,
-                        key: message.key,
-                        messageTimestamp: new Date(message.messageTimestamp * 1000).toISOString(),
-                        pushName: message.pushName
-                    };
-
-                    const response = await axios.post(`${process.env.BACKEND_URL}/api/messages`, { message: fullMessagePayload });
+                if (fullMessagePayload) {
+                    const response = await axios.post(getBackendMessagesUrl(), { message: fullMessagePayload });
 
                     // Si el backend devuelve una respuesta (para comandos de administradores)
                     if (response.data && response.data.reply) {
