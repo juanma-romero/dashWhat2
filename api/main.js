@@ -16,15 +16,48 @@ cloudinary.config({
   secure: true
 });
 
-const app = express()
-app.use(express.json())
+const app = express();
+app.use(express.json());
 
-const phonesToFilter = JSON.parse(fs.readFileSync('./phones.json', 'utf-8')).phones;
+// Endpoint local para que el backend avise de recarga inmediata sin reiniciar Baileys
+app.post('/reload-filters', async (req, res) => {
+    await syncFilteredContacts();
+    res.json({ ok: true, count: IGNORED_PHONES.size });
+});
+
+let phonesToFilter = [];
+try {
+    phonesToFilter = JSON.parse(fs.readFileSync('./phones.json', 'utf-8')).phones || [];
+} catch (e) {
+    console.warn('[main.js] No se pudo leer phones.json inicial:', e.message);
+}
 
 const getBackendMessagesUrl = () => {
     const raw = process.env.BACKEND_URL || 'http://backend:3000/api/messages';
     return raw.endsWith('/api/messages') ? raw : `${raw.replace(/\/+$/, '')}/api/messages`;
 };
+
+const getBackendBaseUrl = () => {
+    const raw = process.env.BACKEND_URL || 'http://backend:3000/api/messages';
+    return raw.replace(/\/api\/messages\/?$/, '').replace(/\/+$/, '');
+};
+
+/**
+ * Sincroniza dinámicamente la lista de teléfonos y JIDs a ignorar desde el backend (MongoDB)
+ */
+async function syncPhonesFromBackend() {
+    try {
+        const url = `${getBackendBaseUrl()}/api/filtered-contacts/active-jids`;
+        const res = await axios.get(url, { timeout: 3000 });
+        if (res.data && Array.isArray(res.data.jids)) {
+            const combined = new Set([...phonesToFilter, ...res.data.jids, ...(res.data.phones || [])]);
+            phonesToFilter = Array.from(combined);
+            console.log(`[main.js] Filtros de contactos sincronizados con backend (${phonesToFilter.length} identificadores activos).`);
+        }
+    } catch (err) {
+        console.warn('[main.js] No se pudo sincronizar filtros con backend (se mantiene lista local):', err.message);
+    }
+}
 
 // Variable global para almacenar la conexión de Baileys
 let sock = null;
@@ -149,7 +182,21 @@ app.post('/send-message', async (req, res) => {
     }
 });
 
+// Endpoint para forzar la recarga dinámica de filtros desde el backend
+app.post('/reload-filters', async (req, res) => {
+    try {
+        await syncPhonesFromBackend();
+        res.json({ success: true, count: phonesToFilter.length });
+    } catch (error) {
+        console.error('[main.js] Error recargando filtros:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 const port = 8880
 app.listen(port, () => {
     console.log(`Servidor Baileys escuchando en el puerto ${port}.`);
+    // Sincronizar filtros al arrancar y periódicamente cada 10 minutos
+    syncPhonesFromBackend();
+    setInterval(syncPhonesFromBackend, 10 * 60 * 1000);
 })
