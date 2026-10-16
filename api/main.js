@@ -98,8 +98,6 @@ async function connectToWhatsApp() {
         if (m.type !== 'notify') return;
 
         for (const msg of m.messages) {
-            // Ignorar mensajes enviados por el bot o duplicados
-            if (msg.key.fromMe) continue;
 
             const senderJid = msg.key.remoteJid;
             const senderPhone = senderJid ? senderJid.split('@')[0] : '';
