@@ -139,6 +139,7 @@ export async function parseBaileysMessage(message, options = {}) {
   const { downloadMedia, uploadMedia } = options;
   if (!message || !message.message) return null;
 
+  const key = message.key || {};
   const rawContent = message.message;
   const messageContent = unwrapMessage(rawContent);
   if (!messageContent) return null;
