@@ -212,23 +212,45 @@ async function connectToWhatsApp() {
     });
 }
 
-// Endpoint para enviar mensajes
+// Endpoint para enviar mensajes de texto o multimedia (documentos, imágenes, etc.)
 app.post('/send-message', async (req, res) => {
-    const { jid, message } = req.body;
+    const { jid, message, mediaUrl, mimetype, fileName } = req.body;
 
-    if (!jid || !message) {
-        return res.status(400).json({ error: 'Faltan parámetros requeridos: jid y message son obligatorios' });
+    if (!jid || (!message && !mediaUrl)) {
+        return res.status(400).json({ error: 'Faltan parámetros requeridos: jid y (message o mediaUrl) son obligatorios' });
     }
     if (!sock) {
         return res.status(503).json({ error: 'La sesión de WhatsApp todavía no está conectada' });
     }
 
     try {
-        await sock.sendMessage(jid, { text: message });
-        console.log(`[main.js] Respuesta enviada exitosamente a ${jid}`);
-        res.json({ success: true, message: 'Mensaje enviado exitosamente' });
+        if (mediaUrl) {
+            // Determinar tipo de adjunto
+            let mediaPayload = {};
+            const mime = mimetype || '';
+            const caption = message || '';
+
+            if (mime.includes('image')) {
+                mediaPayload = { image: { url: mediaUrl }, caption };
+            } else if (mime.includes('video')) {
+                mediaPayload = { video: { url: mediaUrl }, caption };
+            } else if (mime.includes('audio')) {
+                mediaPayload = { audio: { url: mediaUrl }, mimetype: mime };
+            } else {
+                // Documento genérico (PDF, Word, etc.)
+                mediaPayload = { document: { url: mediaUrl }, mimetype: mime || 'application/octet-stream', fileName: fileName || 'documento.pdf', caption };
+            }
+
+            await sock.sendMessage(jid, mediaPayload);
+            console.log(`[main.js] Archivo multimedia enviado exitosamente a ${jid} (mimetype: ${mime})`);
+        } else {
+            await sock.sendMessage(jid, { text: message });
+            console.log(`[main.js] Mensaje enviado exitosamente a ${jid}`);
+        }
+
+        res.json({ success: true, message: 'Mensaje/adjunto enviado exitosamente' });
     } catch (error) {
-        console.error('[main.js] Error enviando respuesta:', error);
+        console.error('[main.js] Error enviando respuesta multimedia/texto:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
