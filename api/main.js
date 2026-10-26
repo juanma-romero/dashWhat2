@@ -32,6 +32,11 @@ try {
 // vez (ver app.listen al final de este archivo).
 let sock = null;
 
+// Último QR emitido por Baileys. Antes el evento `qr` solo logueaba una línea de texto y
+// el string se descartaba: cuando WhatsApp desvinculaba el dispositivo (401 loggedOut) no
+// había ninguna forma de escanear un código nuevo sin editar el código fuente.
+let lastQr = { raw: null, png: null, at: null };
+
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 5000);
 
 const getBackendMessagesUrl = () => {
@@ -129,7 +134,15 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
+            lastQr = { raw: qr, png: null, at: new Date() };
             console.log('[main.js] Nuevo código QR recibido (sesión DESVINCULADA: hace falta escanear)');
+            try {
+                // 512px alcanza para escanear desde la pantalla y mantiene el payload chico.
+                lastQr.png = await QRCode.toBuffer(qr, { type: 'png', width: 512, margin: 1 });
+                console.log('[main.js] QR listo para escanear en GET /qr (o /qr.png para la imagen)');
+            } catch (err) {
+                console.error('[main.js] No se pudo renderizar el QR a PNG:', err.message);
+            }
         }
 
         if (connection === 'close') {
@@ -140,6 +153,8 @@ async function connectToWhatsApp() {
                 setTimeout(connectToWhatsApp, RECONNECT_DELAY_MS);
             }
         } else if (connection === 'open') {
+            // Ya vinculado: el QR deja de ser válido, no tiene sentido seguir sirviéndolo.
+            lastQr = { raw: null, png: null, at: null };
             console.log('[main.js] Conexión abierta exitosamente con WhatsApp');
         }
     });
@@ -264,6 +279,47 @@ app.post('/reload-filters', async (req, res) => {
         console.error('[main.js] Error recargando filtros:', error);
         res.status(500).json({ error: error.message });
     }
+});
+
+// --- Vinculación del teléfono (QR) ------------------------------------------
+// Cuando el teléfono desvincula el dispositivo, Baileys cierra con 401 (loggedOut) y deja
+// de reconectar. Para volver a vincular hay que vaciar baileys_auth_info y escanear un QR
+// nuevo. Baileys rota el código cada ~20 s, así que /qr devuelve una página que se
+// auto-refresca y /qr.png la imagen vigente en ese momento.
+app.get('/qr.png', (req, res) => {
+    if (!lastQr.png) {
+        return res.status(409).json({ error: 'Todavía no hay QR: la sesión está conectada o Baileys aún no emitió uno' });
+    }
+    res.set('Cache-Control', 'no-store');
+    res.type('png').send(lastQr.png);
+});
+
+app.get('/qr', (req, res) => {
+    res.set('Cache-Control', 'no-store').type('html');
+    if (!lastQr.raw) {
+        return res.status(409).send(`<!doctype html><meta charset="utf-8"><title>dashwhat2</title>
+<body style="font-family:system-ui;padding:2rem">
+<h2>Sin QR por ahora</h2>
+<p>La sesión está conectada, o Baileys todavía no emitió un código. Este endpoint sirve
+cuando el dispositivo quedó desvinculado: hay que vaciar <code>baileys_auth_info</code> y reiniciar el servicio.</p>
+<p><a href="/status">/status</a></p></body>`);
+    }
+    res.send(`<!doctype html><meta charset="utf-8">
+<meta http-equiv="refresh" content="3"><title>Vincular WhatsApp — dashwhat2</title>
+<body style="font-family:system-ui;padding:2rem;text-align:center">
+<h2>Vincular WhatsApp</h2>
+<p>En el teléfono: <b>WhatsApp → Dispositivos vinculados → Vincular un dispositivo</b></p>
+<img src="/qr.png?ts=${lastQr.at.getTime()}" width="360" height="360" alt="Código QR">
+<p style="color:#666">Emitido ${lastQr.at.toISOString()} · la página se refresca cada 3 s (el código rota)</p>
+<p><a href="/status">/status</a></p></body>`);
+});
+
+app.get('/status', (req, res) => {
+    res.json({
+        connected: Boolean(sock?.user),
+        hasQr: Boolean(lastQr.raw),
+        qrAt: lastQr.at ? lastQr.at.toISOString() : null,
+    });
 });
 
 // El listen vive FUERA de connectToWhatsApp: adentro, cada reconexión volvía a pedir el
