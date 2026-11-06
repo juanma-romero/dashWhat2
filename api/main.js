@@ -37,6 +37,10 @@ let sock = null;
 // había ninguna forma de escanear un código nuevo sin editar el código fuente.
 let lastQr = { raw: null, png: null, at: null };
 
+const AUTH_DIR = process.env.AUTH_DIR || "baileys_auth_info";
+let sessionState = { invalid: false, lastDisconnect: null, authDirClears: 0, lastClearAt: null };
+const FATAL_DISCONNECT_CODES = new Set([DisconnectReason.loggedOut, DisconnectReason.badSession, DisconnectReason.multideviceMismatch]);
+
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 5000);
 
 const getBackendMessagesUrl = () => {
@@ -116,7 +120,7 @@ async function connectToWhatsApp() {
     const version = await resolveWaVersion();
 
     // Cargar o crear el estado de autenticación
-    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
+    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
     // Crear el socket de Baileys
     sock = makeWASocket({
@@ -134,6 +138,7 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
+            sessionState.invalid = false;
             lastQr = { raw: qr, png: null, at: new Date() };
             console.log('[main.js] Nuevo código QR recibido (sesión DESVINCULADA: hace falta escanear)');
             try {
@@ -147,12 +152,37 @@ async function connectToWhatsApp() {
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-            console.log(`[main.js] Conexión cerrada. statusCode=${statusCode ?? 'n/d'} (${DisconnectReason[statusCode] ?? 'desconocido'}), motivo: ${lastDisconnect?.error?.message}, reconectando: ${shouldReconnect}`);
-            if (shouldReconnect) {
+            const code = statusCode;
+            const name = DisconnectReason[code] ?? "desconocido";
+            sessionState.lastDisconnect = {
+                code,
+                name,
+                reason: lastDisconnect?.error?.message ?? null,
+                at: new Date().toISOString()
+            };
+
+            const fatal = FATAL_DISCONNECT_CODES.has(statusCode) || /conflict|badsession|logged ?out/i.test(String(lastDisconnect?.error?.message));
+
+            if (fatal) {
+                const now = Date.now();
+                if (!sessionState.lastClearAt || (now - sessionState.lastClearAt >= 60000)) {
+                    console.log(`[main.js] SESION INVALIDA (code=${code} ${name}): se limpian credenciales y se emitira un QR nuevo`);
+                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                    fs.mkdirSync(AUTH_DIR, { recursive: true });
+                    sessionState.authDirClears++;
+                    sessionState.lastClearAt = now;
+                }
+                sessionState.invalid = true;
                 setTimeout(connectToWhatsApp, RECONNECT_DELAY_MS);
+            } else {
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                console.log(`[main.js] Conexión cerrada. statusCode=${statusCode ?? 'n/d'} (${DisconnectReason[statusCode] ?? 'desconocido'}), motivo: ${lastDisconnect?.error?.message}, reconectando: ${shouldReconnect}`);
+                if (shouldReconnect) {
+                    setTimeout(connectToWhatsApp, RECONNECT_DELAY_MS);
+                }
             }
         } else if (connection === 'open') {
+            sessionState.invalid = false;
             // Ya vinculado: el QR deja de ser válido, no tiene sentido seguir sirviéndolo.
             lastQr = { raw: null, png: null, at: null };
             console.log('[main.js] Conexión abierta exitosamente con WhatsApp');
@@ -319,6 +349,9 @@ app.get('/status', (req, res) => {
         connected: Boolean(sock?.user),
         hasQr: Boolean(lastQr.raw),
         qrAt: lastQr.at ? lastQr.at.toISOString() : null,
+        sessionInvalid: sessionState.invalid,
+        lastDisconnect: sessionState.lastDisconnect,
+        authDirClears: sessionState.authDirClears,
     });
 });
 
