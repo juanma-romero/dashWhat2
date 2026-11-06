@@ -1,3 +1,15 @@
+/**
+ * main.js
+ *
+ * Servicio Baileys + Express para dashWhat2.
+ * Maneja la conexión con WhatsApp Web, recepción y reenvío de mensajes al backend,
+ * y endpoint HTTP para envío de mensajes salientes.
+ *
+ * Variables de entorno de logging:
+ * - LOG_RAW_PAYLOADS=false: apaga la auditoría del sobre crudo de Baileys (rawPayloadLog.js).
+ * - LOG_MESSAGES_READABLE=false: apaga la línea corta y legible por mensaje real (📩 entrante / 📤 saliente).
+ */
+
 import 'dotenv/config'
 import {makeWASocket, DisconnectReason, useMultiFileAuthState, downloadMediaMessage, fetchLatestWaWebVersion, fetchLatestBaileysVersion } from '@whiskeysockets/baileys'
 import { v2 as cloudinary } from 'cloudinary'
@@ -42,6 +54,11 @@ let sessionState = { invalid: false, lastDisconnect: null, authDirClears: 0, las
 const FATAL_DISCONNECT_CODES = new Set([DisconnectReason.loggedOut, DisconnectReason.badSession, DisconnectReason.multideviceMismatch]);
 
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 5000);
+
+const LOG_MESSAGES_READABLE = (process.env.LOG_MESSAGES_READABLE ?? "true") !== "false";
+function maskJid(jid) { if (!jid) return "?"; const at = String(jid).indexOf("@"); const base = at === -1 ? String(jid) : String(jid).slice(0, at); const dom = at === -1 ? "" : String(jid).slice(at); if (base.length <= 7) return base + dom; return base.slice(0, 4) + "***" + base.slice(-3) + dom; }
+function clip(texto, max = 120) { const t = String(texto ?? "").replace(/\s+/g, " ").trim(); return t.length > max ? t.slice(0, max) + "…" : t; }
+function logMensaje(dir, jid, nombre, tipo, contenido) { if (!LOG_MESSAGES_READABLE) return; const flecha = dir === "in" ? "📩 entrante" : "📤 saliente"; const quien = [nombre, maskJid(jid)].filter(Boolean).join(" · "); console.log(`[main.js] ${flecha} · ${quien} · ${tipo} · "${clip(contenido)}"`); }
 
 const getBackendMessagesUrl = () => {
     const raw = process.env.BACKEND_URL || 'http://backend:3000/api/messages';
@@ -235,6 +252,7 @@ async function connectToWhatsApp() {
                 });
 
                 if (fullMessagePayload) {
+                    logMensaje(msg.key?.fromMe ? "out" : "in", msg.key?.remoteJid, msg.pushName || fullMessagePayload.pushName || "", fullMessagePayload.type, fullMessagePayload.content);
                     const response = await axios.post(getBackendMessagesUrl(), { message: fullMessagePayload });
                     if (response.data && response.data.reply) {
                         console.log(`[main.js] El backend devolvió una respuesta, enviándola a ${response.data.targetJid}`);
@@ -287,9 +305,11 @@ app.post('/send-message', async (req, res) => {
             }
 
             await sock.sendMessage(jid, mediaPayload);
+            logMensaje("out", jid, "", "media", message || mediaUrl);
             console.log(`[main.js] Archivo multimedia enviado exitosamente a ${jid} (mimetype: ${mime})`);
         } else {
             await sock.sendMessage(jid, { text: message });
+            logMensaje("out", jid, "", "text", message);
             console.log(`[main.js] Mensaje enviado exitosamente a ${jid}`);
         }
 
