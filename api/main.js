@@ -50,7 +50,7 @@ let sock = null;
 let lastQr = { raw: null, png: null, at: null };
 
 const AUTH_DIR = process.env.AUTH_DIR || "baileys_auth_info";
-let sessionState = { invalid: false, lastDisconnect: null, authDirClears: 0, lastClearAt: null };
+let sessionState = { invalid: false, lastDisconnect: null, authDirClears: 0, lastClearAt: null, fatalCloses: 0 };
 const FATAL_DISCONNECT_CODES = new Set([DisconnectReason.loggedOut, DisconnectReason.badSession, DisconnectReason.multideviceMismatch]);
 
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 5000);
@@ -132,6 +132,30 @@ async function resolveWaVersion() {
     }
 }
 
+/**
+ * Borra el contenido de AUTH_DIR para forzar una sesión nueva.
+ *
+ * OJO: AUTH_DIR es un BIND MOUNT en producción, así que borrar el directorio
+ * falla siempre con EBUSY (`rmdir` sobre un punto de montaje) y —sin capturar—
+ * tiraba el proceso Node entero (incidente 2026-11-08: 56 crashes en 24 h y el
+ * contenedor reiniciando en bucle). Se borra SOLO el contenido, entrada por
+ * entrada, y cualquier fallo se registra sin matar el servicio.
+ *
+ * @returns {number} cantidad de entradas borradas, o -1 si falló.
+ */
+function limpiarCredencialesDeSesion() {
+    try {
+        const entradas = fs.readdirSync(AUTH_DIR);
+        for (const entrada of entradas) {
+            fs.rmSync(`${AUTH_DIR}/${entrada}`, { recursive: true, force: true });
+        }
+        return entradas.length;
+    } catch (err) {
+        console.error('[main.js] No se pudo limpiar el contenido de las credenciales:', err.message);
+        return -1;
+    }
+}
+
 // Función principal para iniciar la conexión con Baileys
 async function connectToWhatsApp() {
     const version = await resolveWaVersion();
@@ -149,6 +173,23 @@ async function connectToWhatsApp() {
     });
 
     const currentSock = sock;
+
+    // --- Fix upstream (Baileys #2858): el stanza <status> nunca se ackea ---
+    // WhatsApp empezó a entregar los estados de los contactos como un stanza de nivel
+    // superior <status>. Baileys rc.9 solo registra los handlers de message, call,
+    // receipt, notification y ack,class:message, así que ese <status> NUNCA se ackea;
+    // unos 50 minutos después el servidor cierra el stream reclamando justo ese ack
+    // (`stream:error` con `ack class="status"`), lo que llega como
+    // "Stream Errored (ack)" y se mapea a `badSession` (500). Al reconectar el servidor
+    // reenvía el mismo <status> pendiente, no se ackea de nuevo y el ciclo se repite
+    // para siempre: la sesión queda viva pero MUDA (incidente 2026-11-08, 56 crashes y
+    // ~37 h sin mensajes). `sendMessageAck` ya arma lo correcto para este tag:
+    // class='status' y conserva type/participant/recipient.
+    currentSock.ws.on('CB:status', (node) => {
+        currentSock.sendMessageAck(node).catch((err) => {
+            console.error('[main.js] No se pudo ackear el stanza <status>:', err?.message || err);
+        });
+    });
 
     // Manejo de eventos de conexión
     currentSock.ev.on('connection.update', async (update) => {
@@ -182,14 +223,24 @@ async function connectToWhatsApp() {
 
             if (fatal) {
                 const now = Date.now();
-                if (!sessionState.lastClearAt || (now - sessionState.lastClearAt >= 60000)) {
-                    console.log(`[main.js] SESION INVALIDA (code=${code} ${name}): se limpian credenciales y se emitira un QR nuevo`);
-                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-                    fs.mkdirSync(AUTH_DIR, { recursive: true });
+                sessionState.fatalCloses++;
+                const esLogoutReal = statusCode === DisconnectReason.loggedOut
+                    || statusCode === DisconnectReason.multideviceMismatch;
+                const puedeLimpiar = !sessionState.lastClearAt || (now - sessionState.lastClearAt >= 60000);
+                // `badSession` / `conflict` suelen ser el bug #2858 (ack de <status>), NO
+                // credenciales inválidas: limpiarlas forzaría un re-escaneo al pedo. Solo se
+                // limpia con un logout real o si ya van 3 cierres fatales seguidos sin abrir.
+                const limpiar = puedeLimpiar && (esLogoutReal || sessionState.fatalCloses >= 3);
+                if (limpiar) {
+                    console.log(`[main.js] SESION INVALIDA (code=${code} ${name}, cierre fatal #${sessionState.fatalCloses}): se limpian credenciales y se emitira un QR nuevo`);
+                    const borradas = limpiarCredencialesDeSesion();
+                    console.log(`[main.js] Credenciales limpiadas: ${borradas} entradas (AUTH_DIR=${AUTH_DIR}).`);
                     sessionState.authDirClears++;
                     sessionState.lastClearAt = now;
+                    sessionState.invalid = true;
+                } else {
+                    console.log(`[main.js] Cierre fatal #${sessionState.fatalCloses} (code=${code} ${name}): se reconecta SIN limpiar credenciales.`);
                 }
-                sessionState.invalid = true;
                 setTimeout(connectToWhatsApp, RECONNECT_DELAY_MS);
             } else {
                 const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
@@ -200,6 +251,7 @@ async function connectToWhatsApp() {
             }
         } else if (connection === 'open') {
             sessionState.invalid = false;
+            sessionState.fatalCloses = 0;
             // Ya vinculado: el QR deja de ser válido, no tiene sentido seguir sirviéndolo.
             lastQr = { raw: null, png: null, at: null };
             console.log('[main.js] Conexión abierta exitosamente con WhatsApp');
@@ -372,7 +424,19 @@ app.get('/status', (req, res) => {
         sessionInvalid: sessionState.invalid,
         lastDisconnect: sessionState.lastDisconnect,
         authDirClears: sessionState.authDirClears,
+        fatalCloses: sessionState.fatalCloses,
     });
+});
+
+// --- Redes de seguridad del proceso -----------------------------------------
+// Un error no capturado en un handler de Baileys NO debe tumbar el servicio: antes
+// el proceso moría, Docker lo reiniciaba y la sesión quedaba muda sin QR ni aviso
+// (incidente 2026-11-08). Se registra fuerte y se sigue vivo.
+process.on('uncaughtException', (err) => {
+    console.error('[main.js] uncaughtException (el servicio sigue vivo):', err?.stack || err?.message || err);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[main.js] unhandledRejection (el servicio sigue vivo):', reason?.stack || reason?.message || reason);
 });
 
 // El listen vive FUERA de connectToWhatsApp: adentro, cada reconexión volvía a pedir el
